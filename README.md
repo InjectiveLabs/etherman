@@ -29,3 +29,7 @@ Options:
 ```
 $ evm-deploy-contract --signer homestead -E http://localhost:1317 -P 0x59F455CBF7B02A2C1F6B55B4D8D8FEF21BCD530457A9570999FB1C12C82F5201 -G 0
 ```
+
+### License
+
+[MIT](/LICENSE)
