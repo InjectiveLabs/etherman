@@ -92,7 +92,7 @@ func onTx(cmd *cli.Cmd) {
 		}
 
 		var txHash common.Hash
-		boundContract.SetTransact(getTransactFn(client, common.Address{}, &txHash))
+		boundContract.SetTransact(getTransactFn(client, contract.Address, &txHash))
 
 		txCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
 		defer cancelFn()
