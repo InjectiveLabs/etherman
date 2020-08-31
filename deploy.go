@@ -123,9 +123,9 @@ func onDeploy(cmd *cli.Cmd) {
 			return
 		}
 
-		log.WithField("address", address.Hex()).Infoln("obtained contract address")
+		log.WithField("txHash", txHash.Hex()).Infoln("contract address", address.Hex())
 
-		fmt.Println(txHash.Hex())
+		fmt.Println(address.Hex())
 
 		if *await {
 			awaitCtx, cancelFn := context.WithTimeout(context.Background(), defaultTxTimeout)
