@@ -29,4 +29,10 @@ pragma solidity ^0.6.0;
    function getCounter() public view returns (uint256) {
      return counter;
    }
+
+   event Created(address maker);
+
+   constructor() public {
+     emit Created(msg.sender);
+   }
 }
