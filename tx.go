@@ -28,6 +28,7 @@ func onTx(cmd *cli.Cmd) {
 		solSourceFullPath, _ := filepath.Abs(*solSource)
 		contract := getCompiledContract(solc, *contractName, solSourceFullPath, true)
 		contract.Address = common.HexToAddress(*contractAddress)
+		log.Println("target contract", contract.Address.Hex())
 
 		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
 		log.Infoln("sending from", fromAddress.Hex())
@@ -92,7 +93,7 @@ func onTx(cmd *cli.Cmd) {
 		}
 
 		var txHash common.Hash
-		boundContract.SetTransact(getTransactFn(client, common.Address{}, &txHash))
+		boundContract.SetTransact(getTransactFn(client, contract.Address, &txHash))
 
 		txCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
 		defer cancelFn()
@@ -109,7 +110,7 @@ func onTx(cmd *cli.Cmd) {
 		}
 
 		if _, err = boundContract.Transact(txOpts, *methodName, mappedArgs...); err != nil {
-			log.WithError(err).Fatalln("failed to deploy contract")
+			log.WithError(err).Fatalln("failed to send transaction")
 			return
 		}
 

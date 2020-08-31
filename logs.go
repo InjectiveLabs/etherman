@@ -67,12 +67,8 @@ func onLogs(cmd *cli.Cmd) {
 
 		events := make([]map[string]interface{}, 0, len(receipt.Logs))
 		for _, ethLog := range receipt.Logs {
-			v, _ := ethLog.MarshalJSON()
-			log.Infoln("obtained log:", string(v))
-
 			out := make(map[string]interface{})
 			if err := boundContract.UnpackLogIntoMap(out, *eventName, *ethLog); err == nil {
-				log.Println("unpacked into map:", out)
 				events = append(events, out)
 			} else {
 				log.WithError(err).Warningln("unable to unmarshal log")
