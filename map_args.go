@@ -101,8 +101,90 @@ func mapStringArgs(inputs abi.Arguments, args []string) ([]interface{}, error) {
 			out[idx] = args[idx]
 		case abi.AddressTy:
 			out[idx] = common.HexToAddress(args[idx])
-		case abi.FixedBytesTy, abi.BytesTy:
+		case abi.BytesTy:
 			out[idx] = common.Hex2Bytes(args[idx])
+		case abi.FixedBytesTy:
+			switch input.Type.Size {
+			case 1:
+				buf := [1]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 2:
+				buf := [2]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 3:
+				buf := [3]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 4:
+				buf := [4]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 5:
+				buf := [5]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 6:
+				buf := [6]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 7:
+				buf := [7]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 8:
+				buf := [8]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 9:
+				buf := [9]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 10:
+				buf := [10]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 16:
+				buf := [16]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 20:
+				buf := [20]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 32:
+				buf := [32]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 40:
+				buf := [40]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 64:
+				buf := [64]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 128:
+				buf := [128]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 256:
+				buf := [256]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 512:
+				buf := [512]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			case 1024:
+				buf := [1024]byte{}
+				copy(buf[:], common.Hex2Bytes(args[idx]))
+				out[idx] = buf
+			default:
+				err := errors.Errorf("argument %s (idx %d) has fixed array size: %d", input.Name, idx, input.Type.Size)
+				return nil, err
+			}
 		default:
 			err := errors.Errorf("argument %s (idx %d) has unsupported type: %s", input.Name, idx, input.Type.String())
 			return nil, err
