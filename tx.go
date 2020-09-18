@@ -27,6 +27,9 @@ func onTx(cmd *cli.Cmd) {
 
 		solSourceFullPath, _ := filepath.Abs(*solSource)
 		contract := getCompiledContract(solc, *contractName, solSourceFullPath, true)
+		if contract == nil {
+			log.Fatalln("contract compilation failed, check logs")
+		}
 		contract.Address = common.HexToAddress(*contractAddress)
 		log.Println("target contract", contract.Address.Hex())
 
