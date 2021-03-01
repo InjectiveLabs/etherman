@@ -151,28 +151,42 @@ func getSignerFn(
 	chainId *big.Int,
 	from common.Address,
 	pk *ecdsa.PrivateKey,
-) bind.SignerFn {
-	return func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
-		if address != from {
-			err := errors.Errorf("not authorized to sign with %s", address.Hex())
-			return nil, err
-		}
-
-		// default signer is Homestead, but can be overidden
-		if signerType == SignerEIP155 {
-			signer = types.NewEIP155Signer(chainId)
-		}
-
-		txHash := signer.Hash(tx)
-		log.Printf("signer: %T", signer)
-		log.Println("signer obtained tx hash:", txHash.Hex())
-
-		signature, err := crypto.Sign(txHash.Bytes(), pk)
+) (bind.SignerFn, error) {
+	switch signerType {
+	case SignerEIP155:
+		opts, err := bind.NewKeyedTransactorWithChainID(pk, chainId)
 		if err != nil {
+			err = errors.Wrap(err, "failed to init NewKeyedTransactorWithChainID")
 			return nil, err
 		}
 
-		return tx.WithSignature(signer, signature)
+		return opts.Signer, nil
+
+	case SignerHomestead:
+		signerFn := func(address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			if address != from {
+				err := errors.Errorf("not authorized to sign with %s", address.Hex())
+				return nil, err
+			}
+
+			signer := &types.HomesteadSigner{}
+			txHash := signer.Hash(tx)
+			log.Printf("signer: %T", signer)
+			log.Println("signer obtained tx hash:", txHash.Hex())
+
+			signature, err := crypto.Sign(txHash.Bytes(), pk)
+			if err != nil {
+				return nil, err
+			}
+
+			return tx.WithSignature(signer, signature)
+		}
+
+		return signerFn, nil
+
+	default:
+		err := errors.Errorf("unsupported signer type: %s", signerType)
+		return nil, err
 	}
 }
 
@@ -229,7 +243,7 @@ func getTransactFn(ec *Client, contractAddress common.Address, txHashOut *common
 		if opts.Signer == nil {
 			return nil, errors.New("no signer to authorize the transaction with")
 		}
-		signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+		signedTx, err := opts.Signer(opts.From, rawTx)
 		if err != nil {
 			return nil, err
 		}

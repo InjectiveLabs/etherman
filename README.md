@@ -11,7 +11,7 @@ $ evm-deploy-contract --help
 
 Usage: evm-deploy-contract [OPTIONS] COMMAND [arg...]
 
-Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x
+Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.
 
 Options:
       --solc-path   Set path solc executable. Found using 'which' otherwise (env $SOLC_PATH)

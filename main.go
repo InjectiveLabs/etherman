@@ -8,7 +8,7 @@ import (
 	log "github.com/xlab/suplog"
 )
 
-var app = cli.App("evm-deploy-contract", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x")
+var app = cli.App("evm-deploy-contract", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.")
 
 func main() {
 	app.Action = func() {
@@ -18,6 +18,7 @@ func main() {
 	app.Command("build", "Builds given contract and cached build artefacts. Optional step.", onBuild)
 	app.Command("deploy", "Deploys given contract on the EVM chain. Caches build artefacts.", onDeploy)
 	app.Command("tx", "Creates a transaction for particular contract method. Uses build cache.", onTx)
+	app.Command("call", "Calls method of a particular contract. Uses build cache.", onCall)
 	app.Command("logs", "Loads logs of a particular event from contract.", onLogs)
 
 	if err := app.Run(os.Args); err != nil {

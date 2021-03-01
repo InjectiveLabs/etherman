@@ -106,10 +106,15 @@ func onDeploy(cmd *cli.Cmd) {
 		txCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
 		defer cancelFn()
 
+		signerFn, err := getSignerFn(SignerType(*signerType), chainId, fromAddress, privateKey)
+		if err != nil {
+			log.WithError(err).Fatalln("failed to get signer function")
+		}
+
 		txOpts := &bind.TransactOpts{
 			From:     fromAddress,
 			Nonce:    big.NewInt(int64(nonce)),
-			Signer:   getSignerFn(SignerType(*signerType), chainId, fromAddress, privateKey),
+			Signer:   signerFn,
 			Value:    big.NewInt(0),
 			GasPrice: gasPriceInt,
 			GasLimit: uint64(*gasLimit),

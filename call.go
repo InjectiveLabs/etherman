@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/big"
 	"path/filepath"
 
 	cli "github.com/jawher/mow.cli"
@@ -14,13 +14,13 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-func onTx(cmd *cli.Cmd) {
+func onCall(cmd *cli.Cmd) {
 	contractAddress := cmd.StringArg("ADDRESS", "", "Contract address to interact with.")
 	methodName := cmd.StringArg("METHOD", "", "Contract method to transact.")
 	methodArgs := cmd.StringsArg("ARGS", []string{}, "Method transaction arguments. Will be ABI-encoded.")
-	await := cmd.BoolOpt("await", true, "Await transaction confirmation from the RPC.")
+	fromAddress := cmd.StringOpt("from", "0x0000000000000000000000000000000000000000", "Estimate transaction using specified from address.")
 
-	cmd.Spec = "[--await] ADDRESS METHOD [ARGS...]"
+	cmd.Spec = "[--from] ADDRESS METHOD [ARGS...]"
 
 	cmd.Action = func() {
 		solc := getCompiler()
@@ -32,9 +32,7 @@ func onTx(cmd *cli.Cmd) {
 		}
 		contract.Address = common.HexToAddress(*contractAddress)
 		log.Println("target contract", contract.Address.Hex())
-
-		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
-		log.Infoln("sending from", fromAddress.Hex())
+		log.Println("using from address", common.HexToAddress(*fromAddress).Hex())
 
 		dialCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
 		defer cancelFn()
@@ -57,29 +55,6 @@ func onTx(cmd *cli.Cmd) {
 			log.Println("got chainID", chainId.String())
 		}
 
-		nonceCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		nonce, err := client.PendingNonceAt(nonceCtx, fromAddress)
-		if err != nil {
-			log.WithField("from", fromAddress.Hex()).WithError(err).Fatal("failed to get most recent nonce")
-		}
-
-		var gasPriceInt *big.Int
-		if gasPriceSet {
-			gasPriceInt = big.NewInt(int64(*gasPrice))
-		} else {
-			gasCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-			defer cancelFn()
-
-			price, err := client.SuggestGasPrice(gasCtx)
-			if err != nil {
-				log.WithError(err).Fatal("failed to estimate gas on the evm node")
-			}
-
-			gasPriceInt = price
-		}
-
 		boundContract, err := BindContract(client.Client, contract)
 		if err != nil {
 			log.WithField("contract", *contractName).WithError(err).Fatal("failed to bind contract")
@@ -95,40 +70,21 @@ func onTx(cmd *cli.Cmd) {
 			log.WithError(err).Fatalln("failed to map method args")
 		}
 
-		var txHash common.Hash
-		boundContract.SetTransact(getTransactFn(client, contract.Address, &txHash))
-
-		txCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
+		callCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
 		defer cancelFn()
 
-		signerFn, err := getSignerFn(SignerType(*signerType), chainId, fromAddress, privateKey)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to get signer function")
+		callOpts := &bind.CallOpts{
+			From:    common.HexToAddress(*fromAddress),
+			Context: callCtx,
 		}
 
-		txOpts := &bind.TransactOpts{
-			From:     fromAddress,
-			Nonce:    big.NewInt(int64(nonce)),
-			Signer:   signerFn,
-			Value:    big.NewInt(0),
-			GasPrice: gasPriceInt,
-			GasLimit: uint64(*gasLimit),
-
-			Context: txCtx,
-		}
-
-		if _, err = boundContract.Transact(txOpts, *methodName, mappedArgs...); err != nil {
-			log.WithError(err).Fatalln("failed to send transaction")
+		var res []interface{}
+		if err = boundContract.Call(callOpts, &res, *methodName, mappedArgs...); err != nil {
+			log.WithError(err).Fatalln("failed to call contract method")
 			return
 		}
 
-		fmt.Println(txHash.Hex())
-
-		if *await {
-			awaitCtx, cancelFn := context.WithTimeout(context.Background(), defaultTxTimeout)
-			defer cancelFn()
-
-			awaitTx(awaitCtx, client, txHash)
-		}
+		v, _ := json.MarshalIndent(res, "", "\t")
+		fmt.Println(string(v))
 	}
 }
