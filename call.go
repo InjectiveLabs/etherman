@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"os"
 
+	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 func onCall(cmd *cli.Cmd) {
@@ -23,68 +22,45 @@ func onCall(cmd *cli.Cmd) {
 	cmd.Spec = "[--from] ADDRESS METHOD [ARGS...]"
 
 	cmd.Action = func() {
-		solc := getCompiler()
-
-		solSourceFullPath, _ := filepath.Abs(*solSource)
-		contract := getCompiledContract(solc, *contractName, solSourceFullPath, true)
-		if contract == nil {
-			log.Fatalln("contract compilation failed, check logs")
-		}
-		contract.Address = common.HexToAddress(*contractAddress)
-		log.Println("target contract", contract.Address.Hex())
-		log.Println("using from address", common.HexToAddress(*fromAddress).Hex())
-
-		dialCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		var client *Client
-		rc, err := rpc.DialContext(dialCtx, *evmEndpoint)
+		d, err := deployer.New(
+			// only options applicable to call
+			deployer.OptionNoCache(*noCache),
+			deployer.OptionBuildCacheDir(*buildCacheDir),
+		)
 		if err != nil {
-			log.WithError(err).Fatal("failed to dial EVM RPC endpoint")
-		} else {
-			client = NewClient(rc)
+			log.WithError(err).Fatalln("failed to init deployer")
 		}
 
-		chainCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
+		callOpts := deployer.ContractCallOpts{
+			EVMEndpoint:  *evmEndpoint,
+			From:         common.HexToAddress(*fromAddress),
+			SolSource:    *solSource,
+			ContractName: *contractName,
+			Contract:     common.HexToAddress(*contractAddress),
+		}
 
-		chainId, err := client.ChainID(chainCtx)
+		log.Debugln("target contract", callOpts.Contract.Hex())
+		log.Debugln("using from address", callOpts.From.Hex())
+
+		output, _, err := d.Call(
+			context.Background(),
+			callOpts,
+			*methodName,
+			func(args abi.Arguments) []interface{} {
+				mappedArgs, err := mapStringArgs(args, *methodArgs)
+				if err != nil {
+					log.WithError(err).Fatalln("failed to map method args")
+					return nil
+				}
+
+				return mappedArgs
+			},
+		)
 		if err != nil {
-			log.WithError(err).Fatal("failed get valid chain ID")
-		} else {
-			log.Println("got chainID", chainId.String())
+			os.Exit(1)
 		}
 
-		boundContract, err := BindContract(client.Client, contract)
-		if err != nil {
-			log.WithField("contract", *contractName).WithError(err).Fatal("failed to bind contract")
-		}
-
-		method, ok := boundContract.ABI().Methods[*methodName]
-		if !ok {
-			log.WithField("contract", *contractName).Fatalf("method not found: %s", *methodName)
-		}
-
-		mappedArgs, err := mapStringArgs(method.Inputs, *methodArgs)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to map method args")
-		}
-
-		callCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		callOpts := &bind.CallOpts{
-			From:    common.HexToAddress(*fromAddress),
-			Context: callCtx,
-		}
-
-		var res []interface{}
-		if err = boundContract.Call(callOpts, &res, *methodName, mappedArgs...); err != nil {
-			log.WithError(err).Fatalln("failed to call contract method")
-			return
-		}
-
-		v, _ := json.MarshalIndent(res, "", "\t")
+		v, _ := json.MarshalIndent(output, "", "\t")
 		fmt.Println(string(v))
 	}
 }

@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"path/filepath"
+	"os"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
 )
 
 func onDeploy(cmd *cli.Cmd) {
@@ -22,121 +21,60 @@ func onDeploy(cmd *cli.Cmd) {
 	cmd.Spec = "[--bytecode | --await] [ARGS...]"
 
 	cmd.Action = func() {
-		solc := getCompiler()
+		var gasPriceOpt *big.Int
+		if gasPriceSet {
+			gasPriceOpt = new(big.Int).SetUint64(uint64(*gasPrice))
+		}
 
-		solSourceFullPath, _ := filepath.Abs(*solSource)
-		contract := getCompiledContract(solc, *contractName, solSourceFullPath, false)
+		d, err := deployer.New(
+			// only options applicable to tx
+			deployer.OptionGasPrice(gasPriceOpt),
+			deployer.OptionGasLimit(uint64(*gasLimit)),
+			deployer.OptionNoCache(*noCache),
+			deployer.OptionBuildCacheDir(*buildCacheDir),
+		)
+		if err != nil {
+			log.WithError(err).Fatalln("failed to init deployer")
+		}
+
+		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
+		log.Debugln("sending from", fromAddress.Hex())
+
+		deployOpts := deployer.ContractDeployOpts{
+			EVMEndpoint:  *evmEndpoint,
+			From:         fromAddress,
+			FromPk:       privateKey,
+			SolSource:    *solSource,
+			ContractName: *contractName,
+		}
+		txHash, contract, err := d.Deploy(
+			context.Background(),
+			deployOpts,
+			func(args abi.Arguments) []interface{} {
+				mappedArgs, err := mapStringArgs(args, *contractArgs)
+				if err != nil {
+					log.WithError(err).Fatalln("failed to map constructor args")
+					return nil
+				}
+
+				return mappedArgs
+			},
+			*bytecodeOnly,
+			*await,
+		)
+		if err != nil {
+			os.Exit(1)
+		}
 
 		if *bytecodeOnly {
 			fmt.Println(contract.Bin)
 			return
 		}
 
-		if !*noCache {
-			cacheLog := log.WithField("path", *buildCacheDir)
-			cache, err := NewBuildCache(*buildCacheDir)
-			if err != nil {
-				cacheLog.WithError(err).Warningln("failed to use build cache dir")
-			} else if err := cache.StoreContract(solSourceFullPath, contract); err != nil {
-				cacheLog.WithError(err).Warningln("failed to store contract code in build cache")
-			}
+		if !*await {
+			log.WithField("txHash", txHash.Hex()).Infoln("contract address", contract.Address.Hex())
 		}
 
-		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
-		log.Infoln("sending from", fromAddress.Hex())
-
-		dialCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		var client *Client
-		rc, err := rpc.DialContext(dialCtx, *evmEndpoint)
-		if err != nil {
-			log.WithError(err).Fatal("failed to dial EVM RPC endpoint")
-		} else {
-			client = NewClient(rc)
-		}
-
-		chainCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		chainId, err := client.ChainID(chainCtx)
-		if err != nil {
-			log.WithError(err).Fatal("failed get valid chain ID")
-		} else {
-			log.Println("got chainID", chainId.String())
-		}
-
-		nonceCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		nonce, err := client.PendingNonceAt(nonceCtx, fromAddress)
-		if err != nil {
-			log.WithField("from", fromAddress.Hex()).WithError(err).Fatal("failed to get most recent nonce")
-		}
-
-		var gasPriceInt *big.Int
-		if gasPriceSet {
-			gasPriceInt = big.NewInt(int64(*gasPrice))
-		} else {
-			gasCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-			defer cancelFn()
-
-			price, err := client.SuggestGasPrice(gasCtx)
-			if err != nil {
-				log.WithError(err).Fatal("failed to estimate gas on the evm node")
-			}
-
-			gasPriceInt = price
-		}
-
-		boundContract, err := BindContract(client.Client, contract)
-		if err != nil {
-			log.WithField("contract", *contractName).WithError(err).Fatal("failed to bind contract")
-		}
-
-		inputs := boundContract.ABI().Constructor.Inputs
-		mappedArgs, err := mapStringArgs(inputs, *contractArgs)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to map contract args")
-		}
-
-		var txHash common.Hash
-		boundContract.SetTransact(getTransactFn(client, common.Address{}, &txHash))
-
-		txCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
-		defer cancelFn()
-
-		signerFn, err := getSignerFn(SignerType(*signerType), chainId, fromAddress, privateKey)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to get signer function")
-		}
-
-		txOpts := &bind.TransactOpts{
-			From:     fromAddress,
-			Nonce:    big.NewInt(int64(nonce)),
-			Signer:   signerFn,
-			Value:    big.NewInt(0),
-			GasPrice: gasPriceInt,
-			GasLimit: uint64(*gasLimit),
-
-			Context: txCtx,
-		}
-
-		address, _, err := boundContract.DeployContract(txOpts, mappedArgs...)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to deploy contract")
-			return
-		}
-
-		log.WithField("txHash", txHash.Hex()).Infoln("contract address", address.Hex())
-
-		fmt.Println(address.Hex())
-
-		if *await {
-			awaitCtx, cancelFn := context.WithTimeout(context.Background(), defaultTxTimeout)
-			defer cancelFn()
-
-			awaitTx(awaitCtx, client, txHash)
-		}
+		fmt.Println(contract.Address.Hex())
 	}
 }

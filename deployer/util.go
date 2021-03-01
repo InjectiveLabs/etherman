@@ -1,4 +1,4 @@
-package main
+package deployer
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,15 +20,16 @@ import (
 	"github.com/InjectiveLabs/evm-deploy-contract/sol"
 )
 
-func awaitTx(ctx context.Context, client *Client, txHash common.Hash) {
+var ErrAwaitTimeout = errors.New("await timeout")
+
+func awaitTx(ctx context.Context, client *Client, txHash common.Hash) error {
 	awaitLog := log.WithField("hash", txHash.Hex())
 	awaitLog.Infoln("awaiting transaction")
 
 	for {
 		select {
 		case <-ctx.Done():
-			awaitLog.Fatalln("await timeout")
-			return
+			return ErrAwaitTimeout
 		default:
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if err != nil {
@@ -38,47 +38,26 @@ func awaitTx(ctx context.Context, client *Client, txHash common.Hash) {
 					continue
 				}
 
-				awaitLog.WithError(err).Fatalln("failed to await transaction")
-				return
+				awaitLog.WithError(err).Errorln("failed to await transaction")
+				return err
 			}
 
 			if receipt.Status == 0 {
-				awaitLog.Fatalln("transaction reverted")
-				return
+				awaitLog.Errorln("transaction reverted")
+				return ErrTransactionReverted
 			}
 
 			// all good
-			return
+			return nil
 		}
 	}
 }
 
-func getCompiler() sol.Compiler {
-	var solc sol.Compiler
-	var err error
-	if solcPathSet {
-		if solc, err = sol.NewSolCompiler(*solcPath); err != nil {
-			log.WithField("path", *solcPath).WithError(err).Fatal("failed to find solc compiler at path")
-		}
-	} else {
-		solcPathFound, err := sol.WhichSolc()
-		if err != nil {
-			log.WithError(err).Fatal("failed to find solc compiler")
-		}
+func (d *deployer) getCompiledContract(contractName, solFullPath string, loadFromCache bool) *sol.Contract {
+	if !d.options.NoCache && loadFromCache {
+		cacheLog := log.WithField("path", d.options.BuildCacheDir)
 
-		if solc, err = sol.NewSolCompiler(solcPathFound); err != nil {
-			log.WithField("path", solcPathFound).WithError(err).Fatal("failed to find solc compiler at path")
-		}
-	}
-
-	return solc
-}
-
-func getCompiledContract(solc sol.Compiler, contractName, solFullPath string, loadFromCache bool) *sol.Contract {
-	if !*noCache && loadFromCache {
-		cacheLog := log.WithField("path", *buildCacheDir)
-
-		cache, err := NewBuildCache(*buildCacheDir)
+		cache, err := NewBuildCache(d.options.BuildCacheDir)
 		if err != nil {
 			cacheLog.WithError(err).Warningln("failed to use build cache dir")
 		} else {
@@ -93,18 +72,20 @@ func getCompiledContract(solc sol.Compiler, contractName, solFullPath string, lo
 
 	ts := time.Now()
 
-	contracts, err := solc.Compile(filepath.Dir(solFullPath), filepath.Base(solFullPath), 200)
+	contracts, err := d.compiler.Compile(filepath.Dir(solFullPath), filepath.Base(solFullPath), 200)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"dir":  filepath.Dir(solFullPath),
 			"file": filepath.Base(solFullPath),
-		}).WithError(err).Fatal("failed to compile .sol files")
+		}).WithError(err).Errorln("failed to compile .sol files")
+
+		return nil
 	}
 
-	log.Infoln("compiled sources in", time.Since(ts))
+	log.Debugln("compiled sources in", time.Since(ts))
 
 	for name := range contracts {
-		log.Infoln("found", name, "contract")
+		log.Debugln("found", name, "contract")
 	}
 
 	var contract *sol.Contract
@@ -115,28 +96,11 @@ func getCompiledContract(solc sol.Compiler, contractName, solFullPath string, lo
 	}
 
 	if contract == nil {
-		log.WithField("contract", contractName).Fatal("specified contract not found in compiled sources")
+		log.WithField("contract", contractName).Errorln("specified contract not found in compiled sources")
 		return nil
 	}
 
 	return contract
-}
-
-func getFromAndPk(pkHex string) (common.Address, *ecdsa.PrivateKey) {
-	if len(pkHex) == 0 {
-		log.Fatal("private key not specified, use -P or --privkey")
-	} else {
-		pkHex = strings.TrimPrefix(pkHex, "0x")
-	}
-
-	privateKey, err := crypto.HexToECDSA(pkHex)
-	if err != nil {
-		log.WithError(err).Fatal("failed to convert privkey from hex to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	return fromAddress, privateKey
 }
 
 type SignerType string

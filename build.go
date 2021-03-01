@@ -1,28 +1,34 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"path/filepath"
+	"os"
 
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
+
+	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
 )
 
 func onBuild(cmd *cli.Cmd) {
 	cmd.Action = func() {
-		solc := getCompiler()
+		d, err := deployer.New(
+			// only options applicable to build
+			deployer.OptionNoCache(*noCache),
+			deployer.OptionBuildCacheDir(*buildCacheDir),
+		)
+		if err != nil {
+			log.WithError(err).Fatalln("failed to init deployer")
+		}
 
-		solSourceFullPath, _ := filepath.Abs(*solSource)
-		contract := getCompiledContract(solc, *contractName, solSourceFullPath, false)
-
-		if !*noCache {
-			cacheLog := log.WithField("path", *buildCacheDir)
-			cache, err := NewBuildCache(*buildCacheDir)
-			if err != nil {
-				cacheLog.WithError(err).Warningln("failed to use build cache dir")
-			} else if err := cache.StoreContract(solSourceFullPath, contract); err != nil {
-				cacheLog.WithError(err).Warningln("failed to store contract code in build cache")
-			}
+		contract, err := d.Build(
+			context.Background(),
+			*solSource,
+			*contractName,
+		)
+		if err != nil {
+			os.Exit(1)
 		}
 
 		fmt.Println(contract.Bin)

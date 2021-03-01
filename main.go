@@ -1,9 +1,13 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
 )
@@ -24,4 +28,21 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getFromAndPk(pkHex string) (common.Address, *ecdsa.PrivateKey) {
+	if len(pkHex) == 0 {
+		log.Fatal("private key not specified, use -P or --privkey")
+	} else {
+		pkHex = strings.TrimPrefix(pkHex, "0x")
+	}
+
+	privateKey, err := crypto.HexToECDSA(pkHex)
+	if err != nil {
+		log.WithError(err).Fatal("failed to convert privkey from hex to ECDSA")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	return fromAddress, privateKey
 }
