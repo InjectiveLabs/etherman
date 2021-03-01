@@ -26,10 +26,12 @@ Options:
       --no-cache    Disables build cache completely. (env $BUILD_DISABLE_CACHE)
 
 Commands:
+  build             Builds given contract and cached build artefacts. Optional step.
   deploy            Deploys given contract on the EVM chain. Caches build artefacts.
   tx                Creates a transaction for particular contract method. Uses build cache.
+  call              Calls method of a particular contract. Uses build cache.
+  logs              Loads logs of a particular event from contract.
 
-Run 'evm-deploy-contract COMMAND --help' for more information on a command.
 ```
 
 ### Deploying
@@ -92,7 +94,7 @@ $ evm-deploy-contract -E http://localhost:1317 -P 1F2FAB11FA77AE1110D9E9AF59191C
 ### Read logs
 
 ```
-$evm-deploy-contract logs --help
+$ evm-deploy-contract logs --help
 
 Usage: evm-deploy-contract logs ADDRESS TX_HASH EVENT_NAME
 
