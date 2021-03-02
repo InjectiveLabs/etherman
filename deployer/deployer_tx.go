@@ -56,7 +56,11 @@ func (d *deployer) Tx(
 			return noHash, nil, err
 		}
 
-		mappedArgs := methodInputMapper(boundContract.ABI().Constructor.Inputs)
+		var mappedArgs []interface{}
+		if methodInputMapper != nil {
+			mappedArgs = methodInputMapper(boundContract.ABI().Constructor.Inputs)
+		}
+
 		abiPackedArgs, err := boundContract.ABI().Constructor.Inputs.PackValues(mappedArgs)
 		if err != nil {
 			err = errors.Wrap(err, "failed to ABI-encode constructor values")
@@ -110,7 +114,11 @@ func (d *deployer) Tx(
 		return noHash, nil, err
 	}
 
-	mappedArgs := methodInputMapper(method.Inputs)
+	var mappedArgs []interface{}
+	if methodInputMapper != nil {
+		mappedArgs = methodInputMapper(method.Inputs)
+	}
+
 	boundContract.SetTransact(getTransactFn(client, contract.Address, &txHash))
 
 	txCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)

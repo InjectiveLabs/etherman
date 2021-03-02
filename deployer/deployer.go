@@ -107,9 +107,10 @@ type options struct {
 	TxTimeout   time.Duration
 	CallTimeout time.Duration
 
-	SignerType    SignerType
-	GasPrice      *big.Int
-	GasLimit      uint64
+	SignerType SignerType
+	GasPrice   *big.Int
+	GasLimit   uint64
+
 	NoCache       bool
 	BuildCacheDir string
 	SolcPath      string
@@ -126,6 +127,8 @@ func defaultOptions() *options {
 		GasPrice:   new(big.Int),
 		GasLimit:   1000000,
 		NoCache:    false,
+
+		BuildCacheDir: "build",
 	}
 }
 

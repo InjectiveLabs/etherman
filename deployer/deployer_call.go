@@ -72,7 +72,10 @@ func (d *deployer) Call(
 		return nil, nil, err
 	}
 
-	mappedArgs := methodInputMapper(method.Inputs)
+	var mappedArgs []interface{}
+	if methodInputMapper != nil {
+		mappedArgs = methodInputMapper(method.Inputs)
+	}
 
 	callCtx, cancelFn := context.WithTimeout(context.Background(), d.options.CallTimeout)
 	defer cancelFn()
