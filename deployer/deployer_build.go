@@ -22,6 +22,7 @@ func (d *deployer) Build(
 	solSourceFullPath, _ := filepath.Abs(solSource)
 	contract := d.getCompiledContract(contractName, solSourceFullPath, false)
 	if contract == nil {
+		log.Errorln("contract compilation failed, check logs")
 		return nil, ErrCompilationFailed
 	}
 

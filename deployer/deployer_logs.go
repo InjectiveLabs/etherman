@@ -35,6 +35,11 @@ func (d *deployer) Logs(
 ) (events []ContractEvent, err error) {
 	solSourceFullPath, _ := filepath.Abs(logsOpts.SolSource)
 	contract := d.getCompiledContract(logsOpts.ContractName, solSourceFullPath, true)
+	if contract == nil {
+		log.Errorln("contract compilation failed, check logs")
+		return nil, ErrCompilationFailed
+	}
+
 	contract.Address = logsOpts.Contract
 
 	dialCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
