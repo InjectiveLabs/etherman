@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var (
@@ -23,7 +22,6 @@ var (
 )
 
 type ContractDeployOpts struct {
-	EVMEndpoint  string
 	From         common.Address
 	FromPk       *ecdsa.PrivateKey
 	SolSource    string
@@ -76,16 +74,9 @@ func (d *deployer) Deploy(
 		return noHash, contract, nil
 	}
 
-	dialCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
-	defer cancelFn()
-
-	var client *Client
-	rc, err := rpc.DialContext(dialCtx, deployOpts.EVMEndpoint)
+	client, err := d.Backend()
 	if err != nil {
-		log.WithError(err).Errorln("failed to dial EVM RPC endpoint")
-		return noHash, nil, ErrEndpointUnreachable
-	} else {
-		client = NewClient(rc)
+		return noHash, nil, err
 	}
 
 	chainCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)

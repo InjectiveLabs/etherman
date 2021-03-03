@@ -3,6 +3,8 @@ package deployer
 import (
 	"context"
 	"math/big"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -59,6 +61,8 @@ func New(opts ...option) (Deployer, error) {
 }
 
 type Deployer interface {
+	Backend() (*Client, error)
+
 	Build(
 		ctx context.Context,
 		solSource string,
@@ -100,6 +104,9 @@ type Deployer interface {
 type deployer struct {
 	options  *options
 	compiler sol.Compiler
+	client   *Client
+
+	initClientOnce sync.Once
 }
 
 type options struct {
@@ -107,9 +114,10 @@ type options struct {
 	TxTimeout   time.Duration
 	CallTimeout time.Duration
 
-	SignerType SignerType
-	GasPrice   *big.Int
-	GasLimit   uint64
+	SignerType     SignerType
+	GasPrice       *big.Int
+	GasLimit       uint64
+	EVMRPCEndpoint string
 
 	NoCache       bool
 	BuildCacheDir string
@@ -123,11 +131,12 @@ func defaultOptions() *options {
 		TxTimeout:   10 * time.Second,
 		CallTimeout: 10 * time.Second,
 
-		SignerType: SignerEIP155,
-		GasPrice:   new(big.Int),
-		GasLimit:   1000000,
-		NoCache:    false,
+		SignerType:     SignerEIP155,
+		GasPrice:       new(big.Int),
+		GasLimit:       1000000,
+		EVMRPCEndpoint: "http://localhost:8545",
 
+		NoCache:       false,
 		BuildCacheDir: "build",
 	}
 }
@@ -208,6 +217,18 @@ func OptionBuildCacheDir(dir string) option {
 		}
 
 		o.BuildCacheDir = dir
+		return nil
+	}
+}
+
+func OptionEVMRPCEndpoint(uri string) option {
+	return func(o *options) error {
+		_, err := url.ParseRequestURI(uri)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse EVM RPC Endpoint")
+		}
+
+		o.EVMRPCEndpoint = uri
 		return nil
 	}
 }

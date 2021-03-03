@@ -31,6 +31,7 @@ func onTx(cmd *cli.Cmd) {
 
 		d, err := deployer.New(
 			// only options applicable to tx
+			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionGasPrice(gasPriceOpt),
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
@@ -42,7 +43,6 @@ func onTx(cmd *cli.Cmd) {
 
 		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
 		txOpts := deployer.ContractTxOpts{
-			EVMEndpoint:  *evmEndpoint,
 			From:         fromAddress,
 			FromPk:       privateKey,
 			SolSource:    *solSource,

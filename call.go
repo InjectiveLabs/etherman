@@ -24,6 +24,7 @@ func onCall(cmd *cli.Cmd) {
 	cmd.Action = func() {
 		d, err := deployer.New(
 			// only options applicable to call
+			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
 		)
@@ -32,7 +33,6 @@ func onCall(cmd *cli.Cmd) {
 		}
 
 		callOpts := deployer.ContractCallOpts{
-			EVMEndpoint:  *evmEndpoint,
 			From:         common.HexToAddress(*fromAddress),
 			SolSource:    *solSource,
 			ContractName: *contractName,

@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var (
@@ -19,7 +18,6 @@ var (
 )
 
 type ContractLogsOpts struct {
-	EVMEndpoint  string
 	SolSource    string
 	ContractName string
 	Contract     common.Address
@@ -42,16 +40,9 @@ func (d *deployer) Logs(
 
 	contract.Address = logsOpts.Contract
 
-	dialCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
-	defer cancelFn()
-
-	var client *Client
-	rc, err := rpc.DialContext(dialCtx, logsOpts.EVMEndpoint)
+	client, err := d.Backend()
 	if err != nil {
-		log.WithError(err).Errorln("failed to dial EVM RPC endpoint")
-		return nil, ErrEndpointUnreachable
-	} else {
-		client = NewClient(rc)
+		return nil, err
 	}
 
 	boundContract, err := BindContract(client.Client, contract)

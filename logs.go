@@ -23,6 +23,7 @@ func onLogs(cmd *cli.Cmd) {
 	cmd.Action = func() {
 		d, err := deployer.New(
 			// only options applicable to call
+			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
 		)
@@ -31,7 +32,6 @@ func onLogs(cmd *cli.Cmd) {
 		}
 
 		logsOpts := deployer.ContractLogsOpts{
-			EVMEndpoint:  *evmEndpoint,
 			SolSource:    *solSource,
 			ContractName: *contractName,
 			Contract:     common.HexToAddress(*contractAddress),

@@ -28,6 +28,7 @@ func onDeploy(cmd *cli.Cmd) {
 
 		d, err := deployer.New(
 			// only options applicable to tx
+			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionGasPrice(gasPriceOpt),
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
@@ -41,7 +42,6 @@ func onDeploy(cmd *cli.Cmd) {
 		log.Debugln("sending from", fromAddress.Hex())
 
 		deployOpts := deployer.ContractDeployOpts{
-			EVMEndpoint:  *evmEndpoint,
 			From:         fromAddress,
 			FromPk:       privateKey,
 			SolSource:    *solSource,

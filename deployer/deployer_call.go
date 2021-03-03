@@ -10,13 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type AbiMethodInputMapperFunc func(args abi.Arguments) []interface{}
 
 type ContractCallOpts struct {
-	EVMEndpoint  string
 	From         common.Address
 	SolSource    string
 	ContractName string
@@ -37,16 +35,9 @@ func (d *deployer) Call(
 	}
 	contract.Address = callOpts.Contract
 
-	dialCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
-	defer cancelFn()
-
-	var client *Client
-	rc, err := rpc.DialContext(dialCtx, callOpts.EVMEndpoint)
+	client, err := d.Backend()
 	if err != nil {
-		log.WithError(err).Errorln("failed to dial EVM RPC endpoint")
-		return nil, nil, ErrEndpointUnreachable
-	} else {
-		client = NewClient(rc)
+		return nil, nil, err
 	}
 
 	chainCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
