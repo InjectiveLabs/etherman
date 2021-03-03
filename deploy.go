@@ -46,6 +46,8 @@ func onDeploy(cmd *cli.Cmd) {
 			FromPk:       privateKey,
 			SolSource:    *solSource,
 			ContractName: *contractName,
+			BytecodeOnly: *bytecodeOnly,
+			Await:        *await,
 		}
 		txHash, contract, err := d.Deploy(
 			context.Background(),
@@ -59,8 +61,6 @@ func onDeploy(cmd *cli.Cmd) {
 
 				return mappedArgs
 			},
-			*bytecodeOnly,
-			*await,
 		)
 		if err != nil {
 			os.Exit(1)

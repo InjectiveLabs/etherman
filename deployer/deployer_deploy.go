@@ -26,14 +26,14 @@ type ContractDeployOpts struct {
 	FromPk       *ecdsa.PrivateKey
 	SolSource    string
 	ContractName string
+	BytecodeOnly bool
+	Await        bool
 }
 
 func (d *deployer) Deploy(
 	ctx context.Context,
 	deployOpts ContractDeployOpts,
 	constructorInputMapper AbiMethodInputMapperFunc,
-	bytecodeOnly bool,
-	await bool,
 ) (txHash common.Hash, contract *sol.Contract, err error) {
 	solSourceFullPath, _ := filepath.Abs(deployOpts.SolSource)
 	contract = d.getCompiledContract(deployOpts.ContractName, solSourceFullPath, false)
@@ -52,7 +52,7 @@ func (d *deployer) Deploy(
 		}
 	}
 
-	if bytecodeOnly {
+	if deployOpts.BytecodeOnly {
 		boundContract, err := BindContract(nil, contract)
 		if err != nil {
 			log.WithField("contract", deployOpts.ContractName).WithError(err).Errorln("failed to bind contract")
@@ -139,7 +139,7 @@ func (d *deployer) Deploy(
 	}
 	contract.Address = address
 
-	if await {
+	if deployOpts.Await {
 		awaitCtx, cancelFn := context.WithTimeout(context.Background(), d.options.TxTimeout)
 		defer cancelFn()
 

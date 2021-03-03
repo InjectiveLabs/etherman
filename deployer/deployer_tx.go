@@ -19,6 +19,8 @@ type ContractTxOpts struct {
 	SolSource    string
 	ContractName string
 	Contract     common.Address
+	BytecodeOnly bool
+	Await        bool
 }
 
 func (d *deployer) Tx(
@@ -26,8 +28,6 @@ func (d *deployer) Tx(
 	txOpts ContractTxOpts,
 	methodName string,
 	methodInputMapper AbiMethodInputMapperFunc,
-	bytecodeOnly bool,
-	await bool,
 ) (txHash common.Hash, abiPackedArgs []byte, err error) {
 	solSourceFullPath, _ := filepath.Abs(txOpts.SolSource)
 	contract := d.getCompiledContract(txOpts.ContractName, solSourceFullPath, true)
@@ -47,7 +47,7 @@ func (d *deployer) Tx(
 		}
 	}
 
-	if bytecodeOnly {
+	if txOpts.BytecodeOnly {
 		boundContract, err := BindContract(nil, contract)
 		if err != nil {
 			log.WithField("contract", txOpts.ContractName).WithError(err).Errorln("failed to bind contract")
@@ -137,7 +137,7 @@ func (d *deployer) Tx(
 		return noHash, nil, err
 	}
 
-	if await {
+	if txOpts.Await {
 		awaitCtx, cancelFn := context.WithTimeout(context.Background(), d.options.TxTimeout)
 		defer cancelFn()
 

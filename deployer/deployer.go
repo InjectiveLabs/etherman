@@ -73,8 +73,6 @@ type Deployer interface {
 		ctx context.Context,
 		deployOpts ContractDeployOpts,
 		constructorInputMapper AbiMethodInputMapperFunc,
-		bytecodeOnly bool,
-		await bool,
 	) (txHash common.Hash, contract *sol.Contract, err error)
 
 	Tx(
@@ -82,8 +80,6 @@ type Deployer interface {
 		txOpts ContractTxOpts,
 		methodName string,
 		methodInputMapper AbiMethodInputMapperFunc,
-		bytecodeOnly bool,
-		await bool,
 	) (txHash common.Hash, abiPackedArgs []byte, err error)
 
 	Call(

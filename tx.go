@@ -48,6 +48,8 @@ func onTx(cmd *cli.Cmd) {
 			SolSource:    *solSource,
 			ContractName: *contractName,
 			Contract:     common.HexToAddress(*contractAddress),
+			BytecodeOnly: *bytecodeOnly,
+			Await:        *await,
 		}
 
 		log.Debugln("sending from", fromAddress.Hex())
@@ -66,8 +68,6 @@ func onTx(cmd *cli.Cmd) {
 
 				return mappedArgs
 			},
-			*bytecodeOnly,
-			*await,
 		)
 		if err != nil {
 			os.Exit(1)
