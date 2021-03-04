@@ -33,7 +33,7 @@ func (ec *Client) SendTransactionWithRet(ctx context.Context, tx *types.Transact
 	}
 
 	if err := ec.rc.CallContext(ctx, &txHash, "eth_sendRawTransaction", hexutil.Encode(data)); err != nil {
-		return common.Hash{}, err
+		return tx.Hash(), err
 	}
 
 	return txHash, nil
