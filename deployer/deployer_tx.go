@@ -134,7 +134,7 @@ func (d *deployer) Tx(
 
 	if _, err = boundContract.Transact(ethTxOpts, methodName, mappedArgs...); err != nil {
 		log.WithError(err).Errorln("failed to send transaction")
-		return noHash, nil, err
+		return txHash, nil, err
 	}
 
 	if txOpts.Await {
