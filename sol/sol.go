@@ -64,8 +64,8 @@ func (s *solCompiler) SetAllowPaths(paths []string) Compiler {
 }
 
 type solcContract struct {
-	ABI string `json:"abi"`
-	Bin string `json:"bin"`
+	ABI json.RawMessage `json:"abi"`
+	Bin string          `json:"bin"`
 }
 
 type solcOutput struct {
@@ -88,11 +88,13 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 		Dir:    prefix,
 		Stderr: os.Stderr,
 	}
+
 	out, err := cmd.Output()
 	if err != nil {
 		err = fmt.Errorf("solc: failed to compile contract: %v", err)
 		return nil, err
 	}
+
 	var result solcOutput
 	if err := json.Unmarshal(out, &result); err != nil {
 		err = fmt.Errorf("solc: failed to unmarshal JSON output: %v", err)
