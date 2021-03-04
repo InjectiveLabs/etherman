@@ -214,6 +214,7 @@ func getTransactFn(ec *Client, contractAddress common.Address, txHashOut *common
 
 		txHash, err := ec.SendTransactionWithRet(opts.Context, signedTx)
 		if err != nil {
+			*txHashOut = txHash
 			return nil, err
 		}
 

@@ -135,7 +135,7 @@ func (d *deployer) Deploy(
 	address, _, err := boundContract.DeployContract(ethTxOpts, mappedArgs...)
 	if err != nil {
 		log.WithError(err).Errorln("failed to deploy contract")
-		return noHash, nil, err
+		return txHash, nil, err
 	}
 	contract.Address = address
 
