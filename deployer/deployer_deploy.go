@@ -145,10 +145,10 @@ func (d *deployer) Deploy(
 
 		log.WithField("txHash", txHash.Hex()).Infoln("awaiting contract deployment", address.Hex())
 
-		awaitTx(awaitCtx, client, txHash)
+		err = awaitTx(awaitCtx, client, txHash)
 	}
 
-	return txHash, contract, nil
+	return txHash, contract, err
 }
 
 var noHash = common.Hash{}

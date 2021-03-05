@@ -143,8 +143,8 @@ func (d *deployer) Tx(
 
 		log.WithField("contract", contract.Address.Hex()).Infoln("awaiting tx", txHash.Hex())
 
-		awaitTx(awaitCtx, client, txHash)
+		err = awaitTx(awaitCtx, client, txHash)
 	}
 
-	return txHash, nil, nil
+	return txHash, nil, err
 }
