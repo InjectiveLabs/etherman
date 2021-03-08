@@ -86,8 +86,6 @@ func (d *deployer) Deploy(
 	if err != nil {
 		log.WithError(err).Errorln("failed get valid chain ID")
 		return noHash, nil, ErrNoChainID
-	} else {
-		log.Debugln("got chainID", chainId.String())
 	}
 
 	nonceCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
@@ -143,9 +141,9 @@ func (d *deployer) Deploy(
 		awaitCtx, cancelFn := context.WithTimeout(context.Background(), d.options.TxTimeout)
 		defer cancelFn()
 
-		log.WithField("txHash", txHash.Hex()).Infoln("awaiting contract deployment", address.Hex())
+		log.WithField("txHash", txHash.Hex()).Debugln("awaiting contract deployment", address.Hex())
 
-		err = awaitTx(awaitCtx, client, txHash)
+		_, err = awaitTx(awaitCtx, client, txHash)
 	}
 
 	return txHash, contract, err

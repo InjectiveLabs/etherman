@@ -80,8 +80,6 @@ func (d *deployer) Tx(
 	if err != nil {
 		log.WithError(err).Errorln("failed get valid chain ID")
 		return noHash, nil, ErrNoChainID
-	} else {
-		log.Println("got chainID", chainId.String())
 	}
 
 	nonceCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
@@ -132,7 +130,8 @@ func (d *deployer) Tx(
 		Context: txCtx,
 	}
 
-	if _, err = boundContract.Transact(ethTxOpts, methodName, mappedArgs...); err != nil {
+	txData, err := boundContract.Transact(ethTxOpts, methodName, mappedArgs...)
+	if err != nil {
 		log.WithError(err).Errorln("failed to send transaction")
 		return txHash, nil, err
 	}
@@ -141,9 +140,19 @@ func (d *deployer) Tx(
 		awaitCtx, cancelFn := context.WithTimeout(context.Background(), d.options.TxTimeout)
 		defer cancelFn()
 
-		log.WithField("contract", contract.Address.Hex()).Infoln("awaiting tx", txHash.Hex())
+		log.WithField("contract", contract.Address.Hex()).Debugln("awaiting tx", txHash.Hex())
 
-		err = awaitTx(awaitCtx, client, txHash)
+		blockNum, err := awaitTx(awaitCtx, client, txHash)
+
+		if err == ErrTransactionReverted {
+			// attempt to get reason
+			reason, err := getRevertReason(ctx, txOpts.From, contract.Address, client, txData.Data(), blockNum)
+			if err == nil && len(reason) > 0 {
+				return txHash, nil, errors.New(reason)
+			} else if err != nil {
+				log.WithError(err).Warningln("failed to get revert reason")
+			}
+		}
 	}
 
 	return txHash, nil, err

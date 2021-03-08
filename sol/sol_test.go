@@ -39,7 +39,7 @@ func TestCompile(t *testing.T) {
 	orPanic(err)
 	c, err := NewSolCompiler(solcPath)
 	orPanic(err)
-	contracts, err := c.Compile("", "test.sol")
+	contracts, err := c.Compile("", "test.sol", 0)
 	if !assert.NoError(err) {
 		return
 	}

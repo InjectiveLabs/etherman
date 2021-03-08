@@ -19,6 +19,10 @@ var (
 	ErrCompilerNotFound = errors.New("unable to locate Solidity compiler")
 )
 
+func init() {
+	log.DefaultLogger.SetLevel(log.InfoLevel)
+}
+
 type option func(o *options) error
 
 func New(opts ...option) (Deployer, error) {
@@ -94,7 +98,8 @@ type Deployer interface {
 		logsOpts ContractLogsOpts,
 		txHash common.Hash,
 		eventName string,
-	) (events []ContractEvent, err error)
+		eventUnpacker ContractLogUnpackFunc,
+	) (events []interface{}, err error)
 }
 
 type deployer struct {

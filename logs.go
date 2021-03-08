@@ -46,6 +46,7 @@ func onLogs(cmd *cli.Cmd) {
 			logsOpts,
 			common.HexToHash(*txHash),
 			*eventName,
+			nil,
 		)
 		if err != nil {
 			os.Exit(1)

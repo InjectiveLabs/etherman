@@ -43,12 +43,9 @@ func (d *deployer) Call(
 	chainCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
 	defer cancelFn()
 
-	chainId, err := client.ChainID(chainCtx)
-	if err != nil {
+	if _, err := client.ChainID(chainCtx); err != nil {
 		log.WithError(err).Errorln("failed get valid chain ID")
 		return nil, nil, err
-	} else {
-		log.Infoln("got chainID", chainId.String())
 	}
 
 	boundContract, err := BindContract(client.Client, contract)

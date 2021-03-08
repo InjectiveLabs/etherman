@@ -8,11 +8,14 @@ import (
 	log "github.com/xlab/suplog"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	ctypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 var (
 	ErrEventNotFound       = errors.New("event not found")
+	ErrEventParse          = errors.New("unable to unmarshal log")
 	ErrTxNotFound          = errors.New("transaction not found")
 	ErrTransactionReverted = errors.New("transaction reverted without logs")
 )
@@ -23,14 +26,19 @@ type ContractLogsOpts struct {
 	Contract     common.Address
 }
 
-type ContractEvent map[string]interface{}
+type LogUnpacker interface {
+	UnpackLog(out interface{}, event string, log ctypes.Log) error
+}
+
+type ContractLogUnpackFunc func(unpacker LogUnpacker, event abi.Event, log ctypes.Log) (interface{}, error)
 
 func (d *deployer) Logs(
 	ctx context.Context,
 	logsOpts ContractLogsOpts,
 	txHash common.Hash,
 	eventName string,
-) (events []ContractEvent, err error) {
+	eventUnpacker ContractLogUnpackFunc,
+) (events []interface{}, err error) {
 	solSourceFullPath, _ := filepath.Abs(logsOpts.SolSource)
 	contract := d.getCompiledContract(logsOpts.ContractName, solSourceFullPath, true)
 	if contract == nil {
@@ -51,7 +59,8 @@ func (d *deployer) Logs(
 		return nil, err
 	}
 
-	if _, ok := boundContract.ABI().Events[eventName]; !ok {
+	evABI, ok := boundContract.ABI().Events[eventName]
+	if !ok {
 		log.WithField("contract", logsOpts.ContractName).Errorf("event not found: %s", eventName)
 		return nil, ErrEventNotFound
 	}
@@ -74,14 +83,39 @@ func (d *deployer) Logs(
 		return nil, ErrTransactionReverted
 	}
 
-	events = make([]ContractEvent, 0, len(receipt.Logs))
-	for _, ethLog := range receipt.Logs {
-		out := make(map[string]interface{})
-		if err := boundContract.UnpackLogIntoMap(out, eventName, *ethLog); err == nil {
-			events = append(events, out)
-		} else {
-			log.WithField("event", eventName).WithError(err).Warningln("unable to unmarshal log")
+	events = make([]interface{}, 0, len(receipt.Logs))
+	for i, ethLog := range receipt.Logs {
+		if ethLog == nil || len(ethLog.Topics) == 0 {
+			continue
+		} else if evABI.ID != ethLog.Topics[0] {
+			continue
 		}
+
+		if eventUnpacker != nil {
+			ev, err := eventUnpacker(boundContract, evABI, *ethLog)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"event": eventName,
+					"index": i,
+				}).WithError(err).Errorln("unable to unmarshal log")
+				return nil, ErrEventParse
+			}
+
+			events = append(events, ev)
+			continue
+		}
+
+		var eventOut map[string]interface{}
+		err := boundContract.UnpackLogIntoMap(eventOut, eventName, *ethLog)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"event": eventName,
+				"index": i,
+			}).WithError(err).Errorln("unable to unmarshal log")
+			return nil, ErrEventParse
+		}
+
+		events = append(events, eventOut)
 	}
 
 	return events, nil
