@@ -126,8 +126,8 @@ func awaitTx(ctx context.Context, client *Client, txHash common.Hash) (blockNum 
 	}
 }
 
-func (d *deployer) getCompiledContract(contractName, solFullPath string, loadFromCache bool) *sol.Contract {
-	if !d.options.NoCache && loadFromCache {
+func (d *deployer) getCompiledContract(contractName, solFullPath string) *sol.Contract {
+	if !d.options.NoCache {
 		cacheLog := log.WithField("path", d.options.BuildCacheDir)
 
 		cache, err := NewBuildCache(d.options.BuildCacheDir)
@@ -135,9 +135,17 @@ func (d *deployer) getCompiledContract(contractName, solFullPath string, loadFro
 			cacheLog.WithError(err).Warningln("failed to use build cache dir")
 		} else {
 			contract, err := cache.LoadContract(solFullPath, contractName)
-			if err != nil && err != ErrNoCache {
-				cacheLog.WithError(err).Warningln("failed to use build cache")
+			if err != nil {
+				if err != ErrNoCache {
+					// generic error
+					cacheLog.WithError(err).Warningln("failed to use build cache")
+					return nil
+				}
+
+				// ErrNoCache means contract was not found in cache, continue
+				// to build it.
 			} else {
+				// successful load
 				return contract
 			}
 		}

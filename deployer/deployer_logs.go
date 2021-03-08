@@ -40,7 +40,7 @@ func (d *deployer) Logs(
 	eventUnpacker ContractLogUnpackFunc,
 ) (events []interface{}, err error) {
 	solSourceFullPath, _ := filepath.Abs(logsOpts.SolSource)
-	contract := d.getCompiledContract(logsOpts.ContractName, solSourceFullPath, true)
+	contract := d.getCompiledContract(logsOpts.ContractName, solSourceFullPath)
 	if contract == nil {
 		log.Errorln("contract compilation failed, check logs")
 		return nil, ErrCompilationFailed

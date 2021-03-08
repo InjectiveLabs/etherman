@@ -28,7 +28,7 @@ func (d *deployer) Call(
 	methodInputMapper AbiMethodInputMapperFunc,
 ) (output []interface{}, outputAbi abi.Arguments, err error) {
 	solSourceFullPath, _ := filepath.Abs(callOpts.SolSource)
-	contract := d.getCompiledContract(callOpts.ContractName, solSourceFullPath, true)
+	contract := d.getCompiledContract(callOpts.ContractName, solSourceFullPath)
 	if contract == nil {
 		log.Errorln("contract compilation failed, check logs")
 		return nil, nil, ErrCompilationFailed

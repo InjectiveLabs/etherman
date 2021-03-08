@@ -17,7 +17,7 @@ import (
 	"github.com/InjectiveLabs/evm-deploy-contract/sol"
 )
 
-var ErrNoCache = errors.New("no cache")
+var ErrNoCache = errors.New("no cached version")
 
 type BuildCache interface {
 	StoreContract(absSolPath string, contract *sol.Contract) error

@@ -30,7 +30,7 @@ func (d *deployer) Tx(
 	methodInputMapper AbiMethodInputMapperFunc,
 ) (txHash common.Hash, abiPackedArgs []byte, err error) {
 	solSourceFullPath, _ := filepath.Abs(txOpts.SolSource)
-	contract := d.getCompiledContract(txOpts.ContractName, solSourceFullPath, true)
+	contract := d.getCompiledContract(txOpts.ContractName, solSourceFullPath)
 	if contract == nil {
 		log.Errorln("contract compilation failed, check logs")
 		return noHash, nil, ErrCompilationFailed
