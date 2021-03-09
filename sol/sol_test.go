@@ -19,21 +19,33 @@ func TestWhichSolc(t *testing.T) {
 
 func TestCompile(t *testing.T) {
 	assert := assert.New(t)
-	prepare(`contract mortal {
-			    address owner;
-			    function mortal() { owner = msg.sender; }
-			    function kill() { if (msg.sender == owner) suicide(owner); }
-			}
+	prepare(`pragma solidity >=0.6.0 <0.9.0;
 
-			contract greeter is mortal {
-			    string greeting;
-			    function greeter(string _greeting) public {
-			        greeting = _greeting;
-			    }
-			    function greet() constant returns (string) {
-			        return greeting;
-			    }
-			}`)
+contract Mortal {
+    /* Define variable owner of the type address */
+    address owner;
+
+    /* This constructor is executed at initialization and sets the owner of the contract */
+    constructor() { owner = msg.sender; }
+
+    /* Function to recover the funds on the contract */
+    function kill() public { if (msg.sender == owner) selfdestruct(payable(msg.sender)); }
+}
+
+contract Greeter is Mortal {
+    /* Define variable greeting of the type string */
+    string greeting;
+
+    /* This runs when the contract is executed */
+    constructor(string memory _greeting) {
+        greeting = _greeting;
+    }
+
+    /* Main function */
+    function greet() public view returns (string memory) {
+        return greeting;
+    }
+}`)
 	defer cleanup()
 	solcPath, err := WhichSolc()
 	orPanic(err)
@@ -44,23 +56,23 @@ func TestCompile(t *testing.T) {
 		return
 	}
 
-	if !assert.Contains(contracts, "mortal") {
+	if !assert.Contains(contracts, "Mortal") {
 		return
 	}
-	assert.NotEmpty(contracts["mortal"].CompilerVersion)
-	assert.NotEmpty(contracts["mortal"].ABI)
-	assert.NotEmpty(contracts["mortal"].Bin)
-	assert.Equal(contracts["mortal"].Name, "mortal")
-	assert.Equal(contracts["mortal"].SourcePath, "test.sol")
+	assert.NotEmpty(contracts["Mortal"].CompilerVersion)
+	assert.NotEmpty(contracts["Mortal"].ABI)
+	assert.NotEmpty(contracts["Mortal"].Bin)
+	assert.Equal(contracts["Mortal"].Name, "Mortal")
+	assert.Equal(contracts["Mortal"].SourcePath, "test.sol")
 
-	if !assert.Contains(contracts, "greeter") {
+	if !assert.Contains(contracts, "Greeter") {
 		return
 	}
-	assert.NotEmpty(contracts["greeter"].CompilerVersion)
-	assert.NotEmpty(contracts["greeter"].ABI)
-	assert.NotEmpty(contracts["greeter"].Bin)
-	assert.Equal(contracts["greeter"].Name, "greeter")
-	assert.Equal(contracts["greeter"].SourcePath, "test.sol")
+	assert.NotEmpty(contracts["Greeter"].CompilerVersion)
+	assert.NotEmpty(contracts["Greeter"].ABI)
+	assert.NotEmpty(contracts["Greeter"].Bin)
+	assert.Equal(contracts["Greeter"].Name, "Greeter")
+	assert.Equal(contracts["Greeter"].SourcePath, "test.sol")
 }
 
 func cleanup() {
