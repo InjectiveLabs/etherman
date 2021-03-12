@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
 	cli "github.com/jawher/mow.cli"
@@ -26,6 +25,7 @@ func onLogs(cmd *cli.Cmd) {
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to init deployer")
@@ -35,6 +35,9 @@ func onLogs(cmd *cli.Cmd) {
 			SolSource:    *solSource,
 			ContractName: *contractName,
 			Contract:     common.HexToAddress(*contractAddress),
+		}
+		if *coverage {
+			logsOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
 		}
 
 		log.Debugln("target contract", logsOpts.Contract.Hex())
@@ -49,10 +52,14 @@ func onLogs(cmd *cli.Cmd) {
 			nil,
 		)
 		if err != nil {
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 
 		cmdOut, _ := json.MarshalIndent(events, "", "\t")
 		fmt.Println(string(cmdOut))
+
+		if *coverage {
+			logsOpts.CoverageAgent.ReportHTML(nil, *contractName)
+		}
 	}
 }

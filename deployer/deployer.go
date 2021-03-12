@@ -120,10 +120,11 @@ type options struct {
 	GasLimit       uint64
 	EVMRPCEndpoint string
 
-	NoCache       bool
-	BuildCacheDir string
-	SolcPath      string
-	SolcPathSet   bool
+	NoCache        bool
+	BuildCacheDir  string
+	SolcPath       string
+	SolcPathSet    bool
+	EnableCoverage bool
 }
 
 func defaultOptions() *options {
@@ -137,8 +138,9 @@ func defaultOptions() *options {
 		GasLimit:       1000000,
 		EVMRPCEndpoint: "http://localhost:8545",
 
-		NoCache:       false,
-		BuildCacheDir: "build",
+		NoCache:        false,
+		BuildCacheDir:  "build",
+		EnableCoverage: false,
 	}
 }
 
@@ -243,6 +245,13 @@ func OptionSolcPath(dir string) option {
 		}
 
 		o.SolcPath = dir
+		return nil
+	}
+}
+
+func OptionEnableCoverage(enabled bool) option {
+	return func(o *options) error {
+		o.EnableCoverage = enabled
 		return nil
 	}
 }

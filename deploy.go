@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	cli "github.com/jawher/mow.cli"
@@ -33,6 +32,7 @@ func onDeploy(cmd *cli.Cmd) {
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to init deployer")
@@ -49,6 +49,10 @@ func onDeploy(cmd *cli.Cmd) {
 			BytecodeOnly: *bytecodeOnly,
 			Await:        *await,
 		}
+		if *coverage {
+			deployOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
+		}
+
 		txHash, contract, err := d.Deploy(
 			context.Background(),
 			deployOpts,
@@ -63,7 +67,7 @@ func onDeploy(cmd *cli.Cmd) {
 			},
 		)
 		if err != nil {
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 
 		if *bytecodeOnly {

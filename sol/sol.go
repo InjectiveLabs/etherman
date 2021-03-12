@@ -4,21 +4,27 @@ package sol
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/tidwall/sjson"
 )
 
 type Contract struct {
 	Name            string
 	SourcePath      string
+	AllPaths        []string
 	CompilerVersion string
 	Address         common.Address
+	Coverage        bool
+	Statements      [][]int
 
 	ABI []byte
 	Bin string
@@ -27,6 +33,7 @@ type Contract struct {
 type Compiler interface {
 	SetAllowPaths(paths []string) Compiler
 	Compile(prefix, path string, optimize int) (map[string]*Contract, error)
+	CompileWithCoverage(prefix, path string) (map[string]*Contract, error)
 }
 
 func NewSolCompiler(solcPath string) (Compiler, error) {
@@ -68,9 +75,15 @@ type solcContract struct {
 	Bin string          `json:"bin"`
 }
 
+type solcSource struct {
+	AST json.RawMessage `json:"AST,omitempty"`
+}
+
 type solcOutput struct {
-	Contracts map[string]solcContract `json:"contracts"`
-	Version   string                  `json:"version"`
+	Contracts  map[string]solcContract `json:"contracts"`
+	Sources    map[string]solcSource   `json:"sources,omitempty"`
+	SourceList []string                `json:"sourceList,omitempty"`
+	Version    string                  `json:"version"`
 }
 
 func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Contract, error) {
@@ -97,35 +110,207 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 
 	var result solcOutput
 	if err := json.Unmarshal(out, &result); err != nil {
-		err = fmt.Errorf("solc: failed to unmarshal JSON output: %v", err)
+		err = fmt.Errorf("solc: failed to unmarshal Solc output: %v", err)
 		return nil, err
 	}
+
 	if len(result.Contracts) == 0 {
 		err := errors.New("solc: no contracts compiled")
 		return nil, err
 	}
+
 	contracts := make(map[string]*Contract, len(result.Contracts))
 	for id, c := range result.Contracts {
-		idParts := strings.Split(id, ":")
-		if len(idParts) == 1 {
-			err := fmt.Errorf("solc: found an unnamed contract in output: %s", id)
-			return nil, err
-		}
-		name := idParts[len(idParts)-1]
+		name, sourcePath, err := idToNameAndSourcePath(id)
 		if err != nil {
-			err := fmt.Errorf("solc: failed to remarshal ABI: %v", err)
 			return nil, err
 		}
+
 		contracts[name] = &Contract{
 			Name:            name,
-			SourcePath:      idParts[0],
+			SourcePath:      sourcePath,
+			AllPaths:        []string{sourcePath},
 			CompilerVersion: result.Version,
+			Coverage:        false,
 
 			ABI: []byte(c.ABI),
 			Bin: c.Bin,
 		}
 	}
+
 	return contracts, nil
+}
+
+func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Contract, error) {
+	args := []string{s.solcPath}
+	if len(s.allowPaths) > 0 {
+		args = append(args, "--allow-paths", strings.Join(s.allowPaths, ","))
+	}
+
+	args = append(args, "--optimize", "--combined-json", "ast,compact-format", filepath.Join(prefix, path))
+
+	cmd := exec.Cmd{
+		Path:   s.solcPath,
+		Args:   args,
+		Dir:    prefix,
+		Stderr: os.Stderr,
+	}
+
+	out, err := cmd.Output()
+	if err != nil {
+		err = fmt.Errorf("solc: failed to compile contract: %v", err)
+		return nil, err
+	}
+
+	var result solcOutput
+	if err := json.Unmarshal(out, &result); err != nil {
+		err = fmt.Errorf("solc: failed to unmarshal Solc output: %v", err)
+		return nil, err
+	}
+	if len(result.Contracts) == 0 {
+		err := errors.New("solc: no contracts compiled")
+		return nil, err
+	} else if len(result.Sources) == 0 {
+		err := errors.New("solc: no sources collected")
+		return nil, err
+	}
+
+	contractPathsByName := make(map[string]string, len(result.SourceList))
+	contractNamesOrdered := make([]string, len(result.SourceList))
+	contractFilePaths := make([]string, 0, len(result.SourceList))
+
+	for id := range result.Contracts {
+		name, sourcePath, err := idToNameAndSourcePath(id)
+		if err != nil {
+			return nil, err
+		}
+
+		contractPathsByName[name] = sourcePath
+	}
+
+	for name, sourcePath := range contractPathsByName {
+		for idx, src := range result.SourceList {
+			if src == sourcePath {
+				contractNamesOrdered[idx] = name
+				break
+			}
+		}
+	}
+
+	seenPaths := make(map[string]struct{}, len(contractPathsByName))
+
+	contractStatements := make([][]int, 0, len(contractFilePaths))
+	for fileIdx, contractName := range contractNamesOrdered {
+		filePath := contractPathsByName[contractName]
+
+		if _, ok := seenPaths[filePath]; ok {
+			err := errors.Errorf("multiple contracts in the same file is a big no-no. Please refactor %s", filePath)
+			return nil, err
+		} else {
+			seenPaths[filePath] = struct{}{}
+		}
+
+		source := result.Sources[filePath]
+
+		modifiedAST, statements, err := addCoverageMarkers(fileIdx, contractName, source.AST)
+		if err != nil {
+			err = errors.Wrapf(err, "failed to orchestrate %s source with coverage markers", filePath)
+			return nil, err
+		}
+
+		contractFilePaths = append(contractFilePaths, filePath)
+		contractStatements = append(contractStatements, statements...)
+
+		escapedPath := strings.Replace(filePath, ".", "\\.", -1)
+		out, err = sjson.SetBytes(out, fmt.Sprintf("sources.%s.AST", escapedPath), modifiedAST)
+		if err != nil {
+			err = errors.Wrap(err, "failed to update solc output with added coverage")
+			return nil, err
+		}
+	}
+
+	tmp, err := ioutil.TempFile("", "*_sol_coverage.json")
+	if err != nil {
+		err = errors.Wrap(err, "failed to open temp file for orchestrated AST output")
+		return nil, err
+	}
+
+	// fmt.Println("Staging coverage into:", tmp.Name())
+	if _, err := io.Copy(tmp, bytes.NewReader(out)); err != nil {
+		err = errors.Wrap(err, "failed to write temp file with orchestrated AST output")
+		return nil, err
+	}
+
+	_ = tmp.Close()
+
+	defer func() {
+		_ = os.Remove(tmp.Name())
+	}()
+
+	// now just re-import the patched AST
+
+	args = []string{s.solcPath}
+	args = append(args, "--import-ast", "--optimize", "--combined-json", "bin,abi", tmp.Name())
+	errOut := new(bytes.Buffer)
+	finalCmd := exec.Cmd{
+		Path:   s.solcPath,
+		Args:   args,
+		Dir:    prefix,
+		Stderr: errOut,
+	}
+
+	finalOutput, err := finalCmd.Output()
+	if err != nil {
+		_, _ = io.Copy(os.Stderr, errOut)
+		err = fmt.Errorf("solc: failed to compile contract: %v", err)
+		return nil, err
+	}
+
+	var finalResult solcOutput
+	if err := json.Unmarshal(finalOutput, &finalResult); err != nil {
+		err = fmt.Errorf("solc: failed to unmarshal Solc output: %v", err)
+		return nil, err
+	}
+
+	if len(finalResult.Contracts) == 0 {
+		err := errors.New("solc: no contracts compiled")
+		return nil, err
+	}
+
+	contracts := make(map[string]*Contract, len(finalResult.Contracts))
+	for id, c := range finalResult.Contracts {
+		name, sourcePath, err := idToNameAndSourcePath(id)
+		if err != nil {
+			return nil, err
+		}
+
+		contracts[name] = &Contract{
+			Name:            name,
+			SourcePath:      sourcePath,
+			AllPaths:        contractFilePaths,
+			CompilerVersion: finalResult.Version,
+			Coverage:        true,
+			Statements:      contractStatements,
+
+			ABI: []byte(c.ABI),
+			Bin: c.Bin,
+		}
+	}
+
+	return contracts, nil
+}
+
+func idToNameAndSourcePath(id string) (name, sourcePath string, err error) {
+	idParts := strings.Split(id, ":")
+	if len(idParts) == 1 {
+		err = errors.Errorf("solc: found an unnamed contract in output: %s", id)
+		return
+	}
+
+	name = idParts[len(idParts)-1]
+	sourcePath = idParts[0]
+
+	return name, sourcePath, nil
 }
 
 func WhichSolc() (string, error) {

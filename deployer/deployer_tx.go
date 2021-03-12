@@ -9,18 +9,21 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/xlab/suplog"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type ContractTxOpts struct {
-	From         common.Address
-	FromPk       *ecdsa.PrivateKey
-	SolSource    string
-	ContractName string
-	Contract     common.Address
-	BytecodeOnly bool
-	Await        bool
+	From          common.Address
+	FromPk        *ecdsa.PrivateKey
+	SolSource     string
+	ContractName  string
+	Contract      common.Address
+	BytecodeOnly  bool
+	Await         bool
+	CoverageAgent CoverageDataCollector
 }
 
 func (d *deployer) Tx(
@@ -36,16 +39,6 @@ func (d *deployer) Tx(
 		return noHash, nil, ErrCompilationFailed
 	}
 	contract.Address = txOpts.Contract
-
-	if !d.options.NoCache {
-		cacheLog := log.WithField("path", d.options.BuildCacheDir)
-		cache, err := NewBuildCache(d.options.BuildCacheDir)
-		if err != nil {
-			cacheLog.WithError(err).Warningln("failed to use build cache dir")
-		} else if err := cache.StoreContract(solSourceFullPath, contract); err != nil {
-			cacheLog.WithError(err).Warningln("failed to store contract code in build cache")
-		}
-	}
 
 	if txOpts.BytecodeOnly {
 		boundContract, err := BindContract(nil, contract)
@@ -97,6 +90,40 @@ func (d *deployer) Tx(
 		return noHash, nil, err
 	}
 
+	callCtx, cancelFn := context.WithTimeout(context.Background(), d.options.CallTimeout)
+	defer cancelFn()
+
+	var coverageEventABI abi.Event
+	var coverageTopic common.Hash
+
+	if d.options.EnableCoverage {
+		_, coverageEventABI, err = d.GetCoverageEventInfo(callCtx, txOpts.From, contract.Name, contract.Address)
+		if err != ErrNoCoverage {
+			if err != nil {
+				return noHash, nil, err
+			}
+
+			coverageTopic = coverageEventABI.ID
+
+			if txOpts.CoverageAgent != nil {
+				if err := txOpts.CoverageAgent.LoadContract(contract); err != nil {
+					log.WithError(err).Errorln("failed to open referenced dependecies for coverage reporting")
+				}
+				for _, statement := range contract.Statements {
+					if statement[0] < 0 || statement[1] < 0 || statement[2] < 0 {
+						continue
+					}
+
+					txOpts.CoverageAgent.AddStatement(contract.Name,
+						uint64(statement[0]),
+						uint64(statement[1]),
+						uint64(statement[2]),
+					)
+				}
+			}
+		}
+	}
+
 	method, ok := boundContract.ABI().Methods[methodName]
 	if !ok {
 		log.WithField("contract", txOpts.ContractName).Errorf("method not found: %s", methodName)
@@ -132,11 +159,22 @@ func (d *deployer) Tx(
 
 	txData, err := boundContract.Transact(ethTxOpts, methodName, mappedArgs...)
 	if err != nil {
+		if hasCoverageReport(err) {
+			if txOpts.CoverageAgent != nil {
+				coverageReportErr := txOpts.CoverageAgent.CollectCoverageRevert(contract.Name, err)
+				if coverageReportErr != nil {
+					log.WithError(coverageReportErr).Warningln("failed to collect coverage revert event")
+				}
+			}
+
+			err = trimCoverageReport(err)
+		}
+
 		log.WithError(err).Errorln("failed to send transaction")
 		return txHash, nil, err
 	}
 
-	if txOpts.Await {
+	if txOpts.Await || (d.options.EnableCoverage && txOpts.CoverageAgent != nil) {
 		awaitCtx, cancelFn := context.WithTimeout(context.Background(), d.options.TxTimeout)
 		defer cancelFn()
 
@@ -148,9 +186,67 @@ func (d *deployer) Tx(
 			// attempt to get reason
 			reason, err := getRevertReason(ctx, txOpts.From, contract.Address, client, txData.Data(), blockNum)
 			if err == nil && len(reason) > 0 {
-				return txHash, nil, errors.New(reason)
+				err = errors.New(reason)
+
+				if hasCoverageReport(err) {
+					if txOpts.CoverageAgent != nil {
+						coverageReportErr := txOpts.CoverageAgent.CollectCoverageRevert(contract.Name, err)
+						if coverageReportErr != nil {
+							log.WithError(coverageReportErr).Warningln("failed to collect coverage revert event")
+						}
+					}
+
+					err = trimCoverageReport(err)
+				}
+
+				return txHash, nil, err
 			} else if err != nil {
 				log.WithError(err).Warningln("failed to get revert reason")
+				return txHash, nil, err
+			}
+		} else if err != nil {
+			if hasCoverageReport(err) {
+				if txOpts.CoverageAgent != nil {
+					coverageReportErr := txOpts.CoverageAgent.CollectCoverageRevert(contract.Name, err)
+					if coverageReportErr != nil {
+						log.WithError(coverageReportErr).Warningln("failed to collect coverage revert event")
+					}
+				}
+
+				err = trimCoverageReport(err)
+			}
+
+			return txHash, nil, err
+		}
+	}
+
+	if d.options.EnableCoverage && txOpts.CoverageAgent != nil && txHash != noHash {
+		callCtx, cancelFn = context.WithTimeout(context.Background(), d.options.CallTimeout)
+		defer cancelFn()
+
+		callLog := log.WithField("txHash", txHash.Hex())
+		receipt, err := client.TransactionReceipt(callCtx, txHash)
+		if err != nil {
+			if err == ethereum.NotFound {
+				callLog.Errorln("unable to collect coverage: transaction not found")
+				return txHash, nil, ErrTxNotFound
+			}
+
+			callLog.WithError(err).Errorln("failed to get transaction receipt")
+			return txHash, nil, err
+		}
+
+		for _, ethLog := range receipt.Logs {
+			if ethLog == nil || len(ethLog.Topics) == 0 {
+				continue
+			} else if ethLog.Topics[0] == coverageTopic {
+				if txOpts.CoverageAgent != nil {
+					if err := txOpts.CoverageAgent.CollectCoverageEvent(contract.Name, coverageEventABI, ethLog); err != nil {
+						log.WithError(err).WithField("contract", contract.Name).Warningln("failed to collect coverage event from contract")
+					}
+				}
+
+				continue
 			}
 		}
 	}

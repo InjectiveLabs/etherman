@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"os"
 
 	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -36,6 +35,7 @@ func onTx(cmd *cli.Cmd) {
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to init deployer")
@@ -50,6 +50,9 @@ func onTx(cmd *cli.Cmd) {
 			Contract:     common.HexToAddress(*contractAddress),
 			BytecodeOnly: *bytecodeOnly,
 			Await:        *await,
+		}
+		if *coverage {
+			txOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
 		}
 
 		log.Debugln("sending from", fromAddress.Hex())
@@ -70,7 +73,7 @@ func onTx(cmd *cli.Cmd) {
 			},
 		)
 		if err != nil {
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 
 		if *bytecodeOnly {

@@ -17,6 +17,7 @@ func onBuild(cmd *cli.Cmd) {
 			// only options applicable to build
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to init deployer")

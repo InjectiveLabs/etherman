@@ -134,7 +134,7 @@ func (d *deployer) getCompiledContract(contractName, solFullPath string) *sol.Co
 		if err != nil {
 			cacheLog.WithError(err).Warningln("failed to use build cache dir")
 		} else {
-			contract, err := cache.LoadContract(solFullPath, contractName)
+			contract, err := cache.LoadContract(solFullPath, contractName, d.options.EnableCoverage)
 			if err != nil {
 				if err != ErrNoCache {
 					// generic error
@@ -151,13 +151,24 @@ func (d *deployer) getCompiledContract(contractName, solFullPath string) *sol.Co
 		}
 	}
 
-	ts := time.Now()
+	var (
+		ts        = time.Now()
+		err       error
+		contracts map[string]*sol.Contract
+	)
 
-	contracts, err := d.compiler.Compile(filepath.Dir(solFullPath), filepath.Base(solFullPath), 200)
+	if d.options.EnableCoverage {
+		// this is going to orchestrate sources accordingly
+		contracts, err = d.compiler.CompileWithCoverage(filepath.Dir(solFullPath), filepath.Base(solFullPath))
+	} else {
+		contracts, err = d.compiler.Compile(filepath.Dir(solFullPath), filepath.Base(solFullPath), 200)
+	}
+
 	if err != nil {
 		log.WithFields(log.Fields{
-			"dir":  filepath.Dir(solFullPath),
-			"file": filepath.Base(solFullPath),
+			"dir":      filepath.Dir(solFullPath),
+			"file":     filepath.Base(solFullPath),
+			"coverage": d.options.EnableCoverage,
 		}).WithError(err).Errorln("failed to compile .sol files")
 
 		return nil
@@ -179,6 +190,16 @@ func (d *deployer) getCompiledContract(contractName, solFullPath string) *sol.Co
 	if contract == nil {
 		log.WithField("contract", contractName).Errorln("specified contract not found in compiled sources")
 		return nil
+	}
+
+	if !d.options.NoCache {
+		cacheLog := log.WithField("cache_dir", d.options.BuildCacheDir)
+		cache, err := NewBuildCache(d.options.BuildCacheDir)
+		if err != nil {
+			cacheLog.WithError(err).Warningln("failed to use build cache dir")
+		} else if err := cache.StoreContract(solFullPath, contract); err != nil {
+			cacheLog.WithError(err).Warningln("failed to store contract code in build cache")
+		}
 	}
 
 	return contract

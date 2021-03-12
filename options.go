@@ -86,4 +86,11 @@ var (
 		EnvVar: "BUILD_DISABLE_CACHE",
 		Value:  false,
 	})
+
+	coverage = app.Bool(cli.BoolOpt{
+		Name:   "cover",
+		Desc:   "Enables code coverage orchestration",
+		EnvVar: "BUILD_ENABLE_COVERAGE",
+		Value:  false,
+	})
 )

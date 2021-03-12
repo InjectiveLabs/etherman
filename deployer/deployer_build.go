@@ -26,15 +26,5 @@ func (d *deployer) Build(
 		return nil, ErrCompilationFailed
 	}
 
-	if !d.options.NoCache {
-		cacheLog := log.WithField("cache_dir", d.options.BuildCacheDir)
-		cache, err := NewBuildCache(d.options.BuildCacheDir)
-		if err != nil {
-			cacheLog.WithError(err).Warningln("failed to use build cache dir")
-		} else if err := cache.StoreContract(solSourceFullPath, contract); err != nil {
-			cacheLog.WithError(err).Warningln("failed to store contract code in build cache")
-		}
-	}
-
 	return contract, nil
 }

@@ -2,6 +2,7 @@ package deployer
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -21,9 +22,13 @@ var (
 )
 
 type ContractLogsOpts struct {
-	SolSource    string
-	ContractName string
-	Contract     common.Address
+	// From is required there if calls need to be made
+	From common.Address
+
+	SolSource     string
+	ContractName  string
+	Contract      common.Address
+	CoverageAgent CoverageDataCollector
 }
 
 type LogUnpacker interface {
@@ -59,13 +64,41 @@ func (d *deployer) Logs(
 		return nil, err
 	}
 
-	evABI, ok := boundContract.ABI().Events[eventName]
-	if !ok {
-		log.WithField("contract", logsOpts.ContractName).Errorf("event not found: %s", eventName)
-		return nil, ErrEventNotFound
+	callCtx, cancelFn := context.WithTimeout(context.Background(), d.options.CallTimeout)
+	defer cancelFn()
+
+	var coverageTopic common.Hash
+	var coverageEventABI abi.Event
+
+	if d.options.EnableCoverage {
+		_, coverageEventABI, err = d.GetCoverageEventInfo(callCtx, logsOpts.From, contract.Name, contract.Address)
+		if err != ErrNoCoverage {
+			if err != nil {
+				return nil, err
+			}
+
+			coverageTopic = coverageEventABI.ID
+
+			if logsOpts.CoverageAgent != nil {
+				if err := logsOpts.CoverageAgent.LoadContract(contract); err != nil {
+					log.WithError(err).Errorln("failed to open referenced dependecies for coverage reporting")
+				}
+				for _, statement := range contract.Statements {
+					if statement[0] < 0 || statement[1] < 0 || statement[2] < 0 {
+						continue
+					}
+
+					logsOpts.CoverageAgent.AddStatement(contract.Name,
+						uint64(statement[0]),
+						uint64(statement[1]),
+						uint64(statement[2]),
+					)
+				}
+			}
+		}
 	}
 
-	callCtx, cancelFn := context.WithTimeout(context.Background(), d.options.CallTimeout)
+	callCtx, cancelFn = context.WithTimeout(context.Background(), d.options.CallTimeout)
 	defer cancelFn()
 
 	callLog := log.WithField("txHash", txHash.Hex())
@@ -83,15 +116,32 @@ func (d *deployer) Logs(
 		return nil, ErrTransactionReverted
 	}
 
+	evABI, evABIFound := boundContract.ABI().Events[eventName]
+
 	events = make([]interface{}, 0, len(receipt.Logs))
 	for i, ethLog := range receipt.Logs {
 		if ethLog == nil || len(ethLog.Topics) == 0 {
 			continue
-		} else if evABI.ID != ethLog.Topics[0] {
+		}
+
+		if d.options.EnableCoverage && ethLog.Topics[0] == coverageTopic {
+			if logsOpts.CoverageAgent != nil {
+				if err := logsOpts.CoverageAgent.CollectCoverageEvent(contract.Name, coverageEventABI, ethLog); err != nil {
+					log.WithError(err).WithField("contract", contract.Name).Warningln("failed to collect coverage event from contract")
+				}
+			}
+
+			continue
+		} else if evABIFound && evABI.ID != ethLog.Topics[0] {
 			continue
 		}
 
 		if eventUnpacker != nil {
+			if !evABIFound {
+				log.WithField("contract", logsOpts.ContractName).Errorf("event not found: %s", eventName)
+				return nil, ErrEventNotFound
+			}
+
 			ev, err := eventUnpacker(boundContract, evABI, *ethLog)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -105,9 +155,24 @@ func (d *deployer) Logs(
 			continue
 		}
 
-		var eventOut map[string]interface{}
-		err := boundContract.UnpackLogIntoMap(eventOut, eventName, *ethLog)
-		if err != nil {
+		if evABIFound {
+			eventOut := make(map[string]interface{})
+			err := boundContract.UnpackLogIntoMap(eventOut, eventName, *ethLog)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"event": eventName,
+					"index": i,
+				}).WithError(err).Errorln("unable to unmarshal log")
+				return nil, ErrEventParse
+			}
+
+			events = append(events, eventOut)
+			continue
+		}
+
+		eventOut := make(map[string]interface{})
+		ethLogData, _ := json.Marshal(ethLog)
+		if err := json.Unmarshal(ethLogData, &eventOut); err != nil {
 			log.WithFields(log.Fields{
 				"event": eventName,
 				"index": i,

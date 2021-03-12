@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -27,6 +26,7 @@ func onCall(cmd *cli.Cmd) {
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to init deployer")
@@ -37,6 +37,9 @@ func onCall(cmd *cli.Cmd) {
 			SolSource:    *solSource,
 			ContractName: *contractName,
 			Contract:     common.HexToAddress(*contractAddress),
+		}
+		if *coverage {
+			callOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
 		}
 
 		log.Debugln("target contract", callOpts.Contract.Hex())
@@ -57,7 +60,7 @@ func onCall(cmd *cli.Cmd) {
 			},
 		)
 		if err != nil {
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 
 		v, _ := json.MarshalIndent(output, "", "\t")
