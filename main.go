@@ -14,11 +14,31 @@ import (
 
 var app = cli.App("evm-deploy-contract", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.")
 
-func init() {
-	readEnv()
-}
-
 func main() {
+	readEnv()
+
+	readGlobalOptions(
+		&solcPathSet,
+		&solcPath,
+		&contractName,
+		&solSource,
+		&evmEndpoint,
+		&gasPriceSet,
+		&gasPrice,
+		&gasLimit,
+		&buildCacheDir,
+		&noCache,
+		&coverage,
+	)
+
+	readEthereumKeyOptions(
+		&keystoreDir,
+		&from,
+		&fromPassphrase,
+		&fromPrivKey,
+		&useLedger,
+	)
+
 	app.Action = func() {
 		fmt.Println("You should use either deploy, tx or logs command. See --help for more info.")
 	}

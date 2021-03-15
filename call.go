@@ -40,6 +40,34 @@ func onCall(cmd *cli.Cmd) {
 		}
 		if *coverage {
 			callOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
+
+			client, err := d.Backend()
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			chainCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
+			defer cancelFn()
+
+			chainID, err := client.ChainID(chainCtx)
+			if err != nil {
+				log.WithError(err).Fatalln("failed get valid chain ID")
+			}
+
+			fromAddress, signerFn, err := initEthereumAccountsManager(
+				chainID.Uint64(),
+				keystoreDir,
+				from,
+				fromPassphrase,
+				fromPrivKey,
+				useLedger,
+			)
+			if err != nil {
+				log.WithError(err).Fatalln("failed init SignerFn")
+			}
+
+			callOpts.From = fromAddress
+			callOpts.CoverageCall.SignerFn = signerFn
 		}
 
 		log.Debugln("target contract", callOpts.Contract.Hex())

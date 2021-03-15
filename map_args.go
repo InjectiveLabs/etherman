@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -22,176 +23,685 @@ func mapStringArgs(inputs abi.Arguments, args []string) ([]interface{}, error) {
 	out := make([]interface{}, len(inputs))
 
 	for idx, input := range inputs {
-		switch input.Type.T {
-		case abi.IntTy:
-			switch input.Type.Size {
-			case 128, 256:
-				i, ok := new(big.Int).SetString(args[idx], 10)
-				if !ok {
-					err := errors.Errorf("argument %s (idx %d) type %s failed to parse: %s",
-						input.Name, idx, input.Type.String(), args[idx])
-					return nil, err
-				}
+		output, err := mapInput(idx, 0, args[idx], input.Type, input.Name)
+		if err != nil {
+			return nil, err
+		}
 
-				out[idx] = i
-				continue
-			}
+		out[idx] = output
+	}
 
-			i, err := strconv.ParseInt(args[idx], 10, input.Type.Size)
-			if err != nil {
-				err := errors.Wrapf(err, "argument %s (idx %d) type %s failed to parse: %s",
-					input.Name, idx, input.Type.String(), args[idx])
+	return out, nil
+}
+
+func mapInput(idx, level int, arg string, inputType abi.Type, inputName string) (output interface{}, err error) {
+	switch inputType.T {
+	case abi.IntTy:
+		switch inputType.Size {
+		case 128, 256:
+			i, ok := new(big.Int).SetString(arg, 10)
+			if !ok {
+				err := errors.Errorf("argument %s (idx %d) type %s failed to parse: %s",
+					inputName, idx, inputType.String(), arg)
 				return nil, err
 			}
 
-			switch input.Type.Size {
+			output = i
+			return output, nil
+		}
+
+		i, err := strconv.ParseInt(arg, 10, inputType.Size)
+		if err != nil {
+			err := errors.Wrapf(err, "argument %s (idx %d) type %s failed to parse: %s",
+				inputName, idx, inputType.String(), arg)
+			return nil, err
+		}
+
+		switch inputType.Size {
+		case 8:
+			output = int8(i)
+			return output, nil
+		case 16:
+			output = int16(i)
+			return output, nil
+		case 32:
+			output = int32(i)
+			return output, nil
+		case 64:
+			output = int64(i)
+			return output, nil
+		default:
+			err := errors.Errorf("argument %s (idx %d) type %s has wrong size: %d",
+				inputName, idx, inputType.String(), inputType.Size)
+			return nil, err
+		}
+
+	case abi.UintTy:
+		switch inputType.Size {
+		case 128, 256:
+			i, ok := new(big.Int).SetString(arg, 10)
+			if !ok {
+				err := errors.Errorf("argument %s (idx %d) type %s failed to parse: %s",
+					inputName, idx, inputType.String(), arg)
+				return nil, err
+			}
+
+			output = i
+			return output, nil
+		}
+
+		i, err := strconv.ParseUint(arg, 10, inputType.Size)
+		if err != nil {
+			err := errors.Wrapf(err, "argument %s (idx %d) type %s failed to parse: %s",
+				inputName, idx, inputType.String(), arg)
+			return nil, err
+		}
+
+		switch inputType.Size {
+		case 8:
+			output = uint8(i)
+			return output, nil
+		case 16:
+			output = uint16(i)
+			return output, nil
+		case 32:
+			output = uint32(i)
+			return output, nil
+		case 64:
+			output = uint64(i)
+			return output, nil
+		default:
+			err := errors.Errorf("argument %s (idx %d) type %s has wrong size: %d",
+				inputName, idx, inputType.String(), inputType.Size)
+			return nil, err
+		}
+
+	case abi.BoolTy:
+		output = toBool(arg)
+		return output, nil
+	case abi.StringTy:
+		output = arg
+		return output, nil
+	case abi.AddressTy:
+		output = common.HexToAddress(arg)
+		return output, nil
+	case abi.BytesTy:
+		output = common.Hex2Bytes(arg)
+		return output, nil
+	case abi.FixedBytesTy:
+		switch inputType.Size {
+		case 1:
+			buf := [1]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 2:
+			buf := [2]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 3:
+			buf := [3]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 4:
+			buf := [4]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 5:
+			buf := [5]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 6:
+			buf := [6]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 7:
+			buf := [7]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 8:
+			buf := [8]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 9:
+			buf := [9]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 10:
+			buf := [10]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 16:
+			buf := [16]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 20:
+			buf := [20]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 32:
+			buf := [32]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 40:
+			buf := [40]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 64:
+			buf := [64]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 128:
+			buf := [128]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 256:
+			buf := [256]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 512:
+			buf := [512]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		case 1024:
+			buf := [1024]byte{}
+			copy(buf[:], common.Hex2Bytes(arg))
+			output = buf
+			return output, nil
+		default:
+			err := errors.Errorf("argument %s (idx %d) has fixed array size: %d", inputName, idx, inputType.Size)
+			return nil, err
+		}
+	case abi.ArrayTy, abi.SliceTy:
+		if level > 0 {
+			err := errors.Errorf("wrong argument %s (idx %d) - nested arrays unsupported", inputName, idx)
+			return nil, err
+		}
+		elems := strings.Split(arg, ",")
+
+		switch inputType.Elem.T {
+		case abi.IntTy:
+			switch inputType.Elem.Size {
+			case 128, 256:
+				elemOuts := make([]*big.Int, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(*big.Int)
+				}
+				output = elemOuts
+				return output, nil
+			}
+
+			switch inputType.Elem.Size {
 			case 8:
-				out[idx] = int8(i)
+				elemOuts := make([]int8, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(int8)
+				}
+				output = elemOuts
+				return output, nil
 			case 16:
-				out[idx] = int16(i)
+				elemOuts := make([]int16, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(int16)
+				}
+				output = elemOuts
+				return output, nil
 			case 32:
-				out[idx] = int32(i)
+				elemOuts := make([]int32, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(int32)
+				}
+				output = elemOuts
+				return output, nil
 			case 64:
-				out[idx] = int64(i)
+				elemOuts := make([]int64, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(int64)
+				}
+				output = elemOuts
+				return output, nil
 			default:
 				err := errors.Errorf("argument %s (idx %d) type %s has wrong size: %d",
-					input.Name, idx, input.Type.String(), input.Type.Size)
+					inputName, idx, inputType.String(), inputType.Elem.Size)
 				return nil, err
 			}
 
 		case abi.UintTy:
-			switch input.Type.Size {
+			switch inputType.Elem.Size {
 			case 128, 256:
-				i, ok := new(big.Int).SetString(args[idx], 10)
-				if !ok {
-					err := errors.Errorf("argument %s (idx %d) type %s failed to parse: %s",
-						input.Name, idx, input.Type.String(), args[idx])
-					return nil, err
+				elemOuts := make([]*big.Int, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(*big.Int)
 				}
-
-				out[idx] = i
-				continue
+				output = elemOuts
+				return output, nil
 			}
 
-			i, err := strconv.ParseUint(args[idx], 10, input.Type.Size)
-			if err != nil {
-				err := errors.Wrapf(err, "argument %s (idx %d) type %s failed to parse: %s",
-					input.Name, idx, input.Type.String(), args[idx])
-				return nil, err
-			}
-
-			switch input.Type.Size {
+			switch inputType.Elem.Size {
 			case 8:
-				out[idx] = uint8(i)
+				elemOuts := make([]uint8, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(uint8)
+				}
+				output = elemOuts
+				return output, nil
 			case 16:
-				out[idx] = uint16(i)
+				elemOuts := make([]uint16, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(uint16)
+				}
+				output = elemOuts
+				return output, nil
 			case 32:
-				out[idx] = uint32(i)
+				elemOuts := make([]uint32, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(uint32)
+				}
+				output = elemOuts
+				return output, nil
 			case 64:
-				out[idx] = uint64(i)
+				elemOuts := make([]uint64, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.(uint64)
+				}
+				output = elemOuts
+				return output, nil
 			default:
 				err := errors.Errorf("argument %s (idx %d) type %s has wrong size: %d",
-					input.Name, idx, input.Type.String(), input.Type.Size)
+					inputName, idx, inputType.String(), inputType.Elem.Size)
 				return nil, err
 			}
 
 		case abi.BoolTy:
-			out[idx] = toBool(args[idx])
+			elemOuts := make([]bool, len(elems))
+			for elemIdx, elem := range elems {
+				elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+				if err != nil {
+					err = errors.Wrap(err, "failed to parse array of elements")
+					return nil, err
+				}
+
+				elemOuts[elemIdx] = elemOut.(bool)
+			}
+			output = elemOuts
+			return output, nil
 		case abi.StringTy:
-			out[idx] = args[idx]
+			elemOuts := make([]string, len(elems))
+			for elemIdx, elem := range elems {
+				elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+				if err != nil {
+					err = errors.Wrap(err, "failed to parse array of elements")
+					return nil, err
+				}
+
+				elemOuts[elemIdx] = elemOut.(string)
+			}
+			output = elemOuts
+			return output, nil
 		case abi.AddressTy:
-			out[idx] = common.HexToAddress(args[idx])
+			elemOuts := make([]common.Address, len(elems))
+			for elemIdx, elem := range elems {
+				elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+				if err != nil {
+					err = errors.Wrap(err, "failed to parse array of elements")
+					return nil, err
+				}
+
+				elemOuts[elemIdx] = elemOut.(common.Address)
+			}
+			output = elemOuts
+			return output, nil
 		case abi.BytesTy:
-			out[idx] = common.Hex2Bytes(args[idx])
+			elemOuts := make([][]byte, len(elems))
+			for elemIdx, elem := range elems {
+				elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+				if err != nil {
+					err = errors.Wrap(err, "failed to parse array of elements")
+					return nil, err
+				}
+
+				elemOuts[elemIdx] = elemOut.([]byte)
+			}
+			output = elemOuts
+			return output, nil
 		case abi.FixedBytesTy:
-			switch input.Type.Size {
+			switch inputType.Elem.Size {
 			case 1:
-				buf := [1]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][1]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([1]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 2:
-				buf := [2]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][2]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([2]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 3:
-				buf := [3]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][3]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([3]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 4:
-				buf := [4]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][4]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([4]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 5:
-				buf := [5]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][5]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([5]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 6:
-				buf := [6]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][6]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([6]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 7:
-				buf := [7]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][7]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([7]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 8:
-				buf := [8]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][8]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([8]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 9:
-				buf := [9]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][9]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([9]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 10:
-				buf := [10]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][10]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([10]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 16:
-				buf := [16]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][16]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([16]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 20:
-				buf := [20]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][20]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([20]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 32:
-				buf := [32]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][32]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([32]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 40:
-				buf := [40]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][40]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([40]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 64:
-				buf := [64]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][64]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([64]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 128:
-				buf := [128]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][128]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([128]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 256:
-				buf := [256]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][256]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([256]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 512:
-				buf := [512]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][512]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([512]byte)
+				}
+				output = elemOuts
+				return output, nil
 			case 1024:
-				buf := [1024]byte{}
-				copy(buf[:], common.Hex2Bytes(args[idx]))
-				out[idx] = buf
+				elemOuts := make([][1024]byte, len(elems))
+				for elemIdx, elem := range elems {
+					elemOut, err := mapInput(idx, level+1, elem, *inputType.Elem, fmt.Sprintf("%s[%d]", inputName, elemIdx))
+					if err != nil {
+						err = errors.Wrap(err, "failed to parse array of elements")
+						return nil, err
+					}
+
+					elemOuts[elemIdx] = elemOut.([1024]byte)
+				}
+				output = elemOuts
+				return output, nil
 			default:
-				err := errors.Errorf("argument %s (idx %d) has fixed array size: %d", input.Name, idx, input.Type.Size)
+				err := errors.Errorf("argument %s (idx %d) has fixed array size: %d", inputName, idx, inputType.Elem.Size)
 				return nil, err
 			}
-		default:
-			err := errors.Errorf("argument %s (idx %d) has unsupported type: %s", input.Name, idx, input.Type.String())
-			return nil, err
 		}
+	default:
+		err := errors.Errorf("argument %s (idx %d) has unsupported type: %s", inputName, idx, inputType.String())
+		return nil, err
 	}
 
-	return out, nil
+	err = errors.Errorf("argument %s (idx %d) has unsupported type: %s", inputName, idx, inputType.String())
+	return nil, err
 }
 
 func toBool(s string) bool {

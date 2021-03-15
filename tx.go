@@ -20,7 +20,7 @@ func onTx(cmd *cli.Cmd) {
 	methodArgs := cmd.StringsArg("ARGS", []string{}, "Method transaction arguments. Will be ABI-encoded.")
 	await := cmd.BoolOpt("await", true, "Await transaction confirmation from the RPC.")
 
-	cmd.Spec = "[--await] ADDRESS METHOD [ARGS...]"
+	cmd.Spec = "[--bytecode | --await] ADDRESS METHOD [ARGS...]"
 
 	cmd.Action = func() {
 		var gasPriceOpt *big.Int

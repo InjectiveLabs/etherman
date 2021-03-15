@@ -23,37 +23,51 @@ import (
 )
 
 var (
-	keystoreDir = app.String(cli.StringOpt{
+	keystoreDir    *string
+	from           *string
+	fromPassphrase *string
+	fromPrivKey    *string
+	useLedger      *bool
+)
+
+func readEthereumKeyOptions(
+	keystoreDir **string,
+	from **string,
+	fromPassphrase **string,
+	fromPrivKey **string,
+	useLedger **bool,
+) {
+	*keystoreDir = app.String(cli.StringOpt{
 		Name:   "keystore-dir",
 		Desc:   "Specify Ethereum keystore dir (Geth or Clef) prefix.",
 		EnvVar: "DEPLOYER_KEYSTORE_DIR",
 	})
 
-	from = app.String(cli.StringOpt{
+	*from = app.String(cli.StringOpt{
 		Name:   "F from",
 		Desc:   "Specify the from address. If specified, must exist in keystore, ledger or match the privkey.",
 		EnvVar: "DEPLOYER_FROM",
 	})
 
-	fromPassphrase = app.String(cli.StringOpt{
+	*fromPassphrase = app.String(cli.StringOpt{
 		Name:   "from-passphrase",
 		Desc:   "Passphrase to unlock the private key from armor, if empty then stdin is used.",
 		EnvVar: "DEPLOYER_FROM_PASSPHRASE",
 	})
 
-	fromPrivKey = app.String(cli.StringOpt{
+	*fromPrivKey = app.String(cli.StringOpt{
 		Name:   "P from-pk",
 		Desc:   "Provide a raw Ethereum private key of the validator in hex.",
 		EnvVar: "DEPLOYER_FROM_PK",
 	})
 
-	useLedger = app.Bool(cli.BoolOpt{
+	*useLedger = app.Bool(cli.BoolOpt{
 		Name:   "ledger",
 		Desc:   "Use the Ethereum app on hardware ledger to sign transactions.",
 		EnvVar: "DEPLOYER_USE_LEDGER",
 		Value:  false,
 	})
-)
+}
 
 var emptyEthAddress = ethcmn.Address{}
 

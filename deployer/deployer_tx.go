@@ -48,12 +48,18 @@ func (d *deployer) Tx(
 			return noHash, nil, err
 		}
 
-		var mappedArgs []interface{}
-		if methodInputMapper != nil {
-			mappedArgs = methodInputMapper(boundContract.ABI().Constructor.Inputs)
+		method, ok := boundContract.ABI().Methods[methodName]
+		if !ok {
+			log.WithField("contract", txOpts.ContractName).Errorf("method not found: %s", methodName)
+			return noHash, nil, err
 		}
 
-		abiPackedArgs, err := boundContract.ABI().Constructor.Inputs.PackValues(mappedArgs)
+		var mappedArgs []interface{}
+		if methodInputMapper != nil {
+			mappedArgs = methodInputMapper(method.Inputs)
+		}
+
+		abiPackedArgs, err := method.Inputs.PackValues(mappedArgs)
 		if err != nil {
 			err = errors.Wrap(err, "failed to ABI-encode constructor values")
 			return noHash, nil, err
