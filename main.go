@@ -22,6 +22,7 @@ func main() {
 		&solcPath,
 		&contractName,
 		&solSource,
+		&solAllowedPaths,
 		&evmEndpoint,
 		&gasPriceSet,
 		&gasPrice,

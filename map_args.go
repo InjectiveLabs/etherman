@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -126,103 +127,103 @@ func mapInput(idx, level int, arg string, inputType abi.Type, inputName string) 
 		output = common.HexToAddress(arg)
 		return output, nil
 	case abi.BytesTy:
-		output = common.Hex2Bytes(arg)
+		output = hexToBytes(arg)
 		return output, nil
 	case abi.FixedBytesTy:
 		switch inputType.Size {
 		case 1:
 			buf := [1]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 2:
 			buf := [2]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 3:
 			buf := [3]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 4:
 			buf := [4]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 5:
 			buf := [5]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 6:
 			buf := [6]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 7:
 			buf := [7]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 8:
 			buf := [8]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 9:
 			buf := [9]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 10:
 			buf := [10]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 16:
 			buf := [16]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 20:
 			buf := [20]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 32:
 			buf := [32]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 40:
 			buf := [40]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 64:
 			buf := [64]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 128:
 			buf := [128]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 256:
 			buf := [256]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 512:
 			buf := [512]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		case 1024:
 			buf := [1024]byte{}
-			copy(buf[:], common.Hex2Bytes(arg))
+			copy(buf[:], hexToBytes(arg))
 			output = buf
 			return output, nil
 		default:
@@ -702,6 +703,19 @@ func mapInput(idx, level int, arg string, inputType abi.Type, inputName string) 
 
 	err = errors.Errorf("argument %s (idx %d) has unsupported type: %s", inputName, idx, inputType.String())
 	return nil, err
+}
+
+func hexToBytes(str string) []byte {
+	if strings.HasPrefix(str, "0x") {
+		str = str[2:]
+	}
+
+	data, err := hex.DecodeString(str)
+	if err != nil {
+		panic(err)
+	}
+
+	return data
 }
 
 func toBool(s string) bool {

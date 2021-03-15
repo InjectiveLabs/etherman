@@ -32,6 +32,7 @@ func onDeploy(cmd *cli.Cmd) {
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionSolcAllowedPaths(*solAllowedPaths),
 			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {

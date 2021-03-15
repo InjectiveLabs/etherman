@@ -14,7 +14,7 @@ import (
 )
 
 func onTx(cmd *cli.Cmd) {
-	bytecodeOnly := cmd.BoolOpt("bytecode", false, "Produce hex-encoded ABI-packed params bytecode only. Do not interact with RPC.")
+	bytecodeOnly := cmd.BoolOpt("bytecode", false, "Produce hex-encoded ABI-packed calldata bytecode only. Do not interact with RPC.")
 	contractAddress := cmd.StringArg("ADDRESS", "", "Contract address to interact with.")
 	methodName := cmd.StringArg("METHOD", "", "Contract method to transact.")
 	methodArgs := cmd.StringsArg("ARGS", []string{}, "Method transaction arguments. Will be ABI-encoded.")
@@ -35,6 +35,7 @@ func onTx(cmd *cli.Cmd) {
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionSolcAllowedPaths(*solAllowedPaths),
 			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
@@ -84,7 +85,7 @@ func onTx(cmd *cli.Cmd) {
 		log.Debugln("sending from", fromAddress.Hex())
 		log.Debugln("target contract", txOpts.Contract.Hex())
 
-		txHash, abiPackedArgs, err := d.Tx(
+		txHash, abiPackedCalldata, err := d.Tx(
 			context.Background(),
 			txOpts,
 			*methodName,
@@ -103,7 +104,7 @@ func onTx(cmd *cli.Cmd) {
 		}
 
 		if *bytecodeOnly {
-			fmt.Println(hex.EncodeToString(abiPackedArgs))
+			fmt.Println(hex.EncodeToString(abiPackedCalldata))
 			return
 		}
 

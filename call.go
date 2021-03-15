@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -13,12 +14,13 @@ import (
 )
 
 func onCall(cmd *cli.Cmd) {
+	bytecodeOnly := cmd.BoolOpt("bytecode", false, "Produce hex-encoded ABI-packed calldata bytecode only. Do not interact with RPC.")
 	contractAddress := cmd.StringArg("ADDRESS", "", "Contract address to interact with.")
 	methodName := cmd.StringArg("METHOD", "", "Contract method to transact.")
 	methodArgs := cmd.StringsArg("ARGS", []string{}, "Method transaction arguments. Will be ABI-encoded.")
 	fromAddress := cmd.StringOpt("from", "0x0000000000000000000000000000000000000000", "Estimate transaction using specified from address.")
 
-	cmd.Spec = "[--from] ADDRESS METHOD [ARGS...]"
+	cmd.Spec = "[--bytecode] [--from] ADDRESS METHOD [ARGS...]"
 
 	cmd.Action = func() {
 		d, err := deployer.New(
@@ -26,6 +28,7 @@ func onCall(cmd *cli.Cmd) {
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionSolcAllowedPaths(*solAllowedPaths),
 			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
@@ -89,6 +92,11 @@ func onCall(cmd *cli.Cmd) {
 		)
 		if err != nil {
 			log.Fatalln(err)
+		}
+
+		if *bytecodeOnly {
+			fmt.Println(hex.EncodeToString(output[0].([]byte)))
+			return
 		}
 
 		v, _ := json.MarshalIndent(output, "", "\t")

@@ -22,6 +22,7 @@ type ContractCallOpts struct {
 	Contract      common.Address
 	CoverageCall  ContractCoverageCallOpts
 	CoverageAgent CoverageDataCollector
+	BytecodeOnly  bool
 }
 
 type ContractCoverageCallOpts struct {
@@ -42,6 +43,38 @@ func (d *deployer) Call(
 		return nil, nil, ErrCompilationFailed
 	}
 	contract.Address = callOpts.Contract
+
+	if callOpts.BytecodeOnly {
+		boundContract, err := BindContract(nil, contract)
+		if err != nil {
+			log.WithField("contract", callOpts.ContractName).WithError(err).Errorln("failed to bind contract")
+			return nil, nil, err
+		}
+
+		method, ok := boundContract.ABI().Methods[methodName]
+		if !ok {
+			log.WithField("contract", callOpts.ContractName).Errorf("method not found: %s", methodName)
+			return nil, nil, err
+		}
+
+		var mappedArgs []interface{}
+		if methodInputMapper != nil {
+			mappedArgs = methodInputMapper(method.Inputs)
+		}
+
+		abiPackedCalldata := append([]byte{}, method.ID...)
+		packedArgs, err := method.Inputs.PackValues(mappedArgs)
+		if err != nil {
+			err = errors.Wrap(err, "failed to ABI-encode method args")
+			return nil, nil, err
+		}
+		abiPackedCalldata = append(abiPackedCalldata, packedArgs...)
+
+		output := []interface{}{
+			abiPackedCalldata,
+		}
+		return output, nil, nil
+	}
 
 	client, err := d.Backend()
 	if err != nil {

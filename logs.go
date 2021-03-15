@@ -25,6 +25,7 @@ func onLogs(cmd *cli.Cmd) {
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionSolcAllowedPaths(*solAllowedPaths),
 			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {

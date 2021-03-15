@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"net/url"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -60,6 +61,15 @@ func New(opts ...option) (Deployer, error) {
 
 		d.compiler = solc
 	}
+
+	for i := range d.options.SolcAllowedPaths {
+		abs, err := filepath.Abs(d.options.SolcAllowedPaths[i])
+		if err == nil {
+			d.options.SolcAllowedPaths[i] = abs
+		}
+	}
+
+	d.compiler.SetAllowPaths(d.options.SolcAllowedPaths)
 
 	return d, nil
 }
@@ -120,11 +130,12 @@ type options struct {
 	GasLimit       uint64
 	EVMRPCEndpoint string
 
-	NoCache        bool
-	BuildCacheDir  string
-	SolcPath       string
-	SolcPathSet    bool
-	EnableCoverage bool
+	NoCache          bool
+	BuildCacheDir    string
+	SolcPath         string
+	SolcPathSet      bool
+	EnableCoverage   bool
+	SolcAllowedPaths []string
 }
 
 func defaultOptions() *options {
@@ -252,6 +263,13 @@ func OptionSolcPath(dir string) option {
 func OptionEnableCoverage(enabled bool) option {
 	return func(o *options) error {
 		o.EnableCoverage = enabled
+		return nil
+	}
+}
+
+func OptionSolcAllowedPaths(allowedPaths []string) option {
+	return func(o *options) error {
+		o.SolcAllowedPaths = allowedPaths
 		return nil
 	}
 }

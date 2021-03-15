@@ -16,9 +16,10 @@ var (
 	solcPathSet bool
 	solcPath    *string
 
-	contractName *string
-	solSource    *string
-	evmEndpoint  *string
+	contractName    *string
+	solSource       *string
+	solAllowedPaths *[]string
+	evmEndpoint     *string
 
 	gasPriceSet bool
 	gasPrice    *int
@@ -35,6 +36,7 @@ func readGlobalOptions(
 
 	contractName **string,
 	solSource **string,
+	solAllowedPaths **[]string,
 	evmEndpoint **string,
 
 	gasPriceSet *bool,
@@ -65,6 +67,13 @@ func readGlobalOptions(
 		Desc:   "Set path for .sol source file of the contract.",
 		EnvVar: "DEPLOYER_SOL_SOURCE_FILE",
 		Value:  "contracts/Counter.sol",
+	})
+
+	*solAllowedPaths = app.Strings(cli.StringsOpt{
+		Name:   "allowed-paths",
+		Desc:   "Specify allowed paths to Solc compiler, allows to include contracts from outside workdir",
+		EnvVar: "DEPLOYER_SOL_ALLOWED_PATHS",
+		Value:  []string{},
 	})
 
 	*evmEndpoint = app.String(cli.StringOpt{

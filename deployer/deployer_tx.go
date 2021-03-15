@@ -32,7 +32,7 @@ func (d *deployer) Tx(
 	txOpts ContractTxOpts,
 	methodName string,
 	methodInputMapper AbiMethodInputMapperFunc,
-) (txHash common.Hash, abiPackedArgs []byte, err error) {
+) (txHash common.Hash, abiPackedCalldata []byte, err error) {
 	solSourceFullPath, _ := filepath.Abs(txOpts.SolSource)
 	contract := d.getCompiledContract(txOpts.ContractName, solSourceFullPath)
 	if contract == nil {
@@ -59,13 +59,15 @@ func (d *deployer) Tx(
 			mappedArgs = methodInputMapper(method.Inputs)
 		}
 
-		abiPackedArgs, err := method.Inputs.PackValues(mappedArgs)
+		abiPackedCalldata := append([]byte{}, method.ID...)
+		packedArgs, err := method.Inputs.PackValues(mappedArgs)
 		if err != nil {
-			err = errors.Wrap(err, "failed to ABI-encode constructor values")
+			err = errors.Wrap(err, "failed to ABI-encode method args")
 			return noHash, nil, err
 		}
+		abiPackedCalldata = append(abiPackedCalldata, packedArgs...)
 
-		return noHash, abiPackedArgs, nil
+		return noHash, abiPackedCalldata, nil
 	}
 
 	client, err := d.Backend()

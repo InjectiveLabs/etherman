@@ -17,6 +17,7 @@ func onBuild(cmd *cli.Cmd) {
 			// only options applicable to build
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),
+			deployer.OptionSolcAllowedPaths(*solAllowedPaths),
 			deployer.OptionEnableCoverage(*coverage),
 		)
 		if err != nil {
