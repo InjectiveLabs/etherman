@@ -15,6 +15,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/tidwall/sjson v1.1.5
 	github.com/xlab/suplog v1.1.0
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b
 	golang.org/x/tools v0.0.0-20200117012304-6edc0a871e69
 )

@@ -41,10 +41,36 @@ func onTx(cmd *cli.Cmd) {
 			log.WithError(err).Fatalln("failed to init deployer")
 		}
 
-		fromAddress, privateKey := getFromAndPk(*fromPrivkey)
+		client, err := d.Backend()
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		chainCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
+		defer cancelFn()
+
+		chainID, err := client.ChainID(chainCtx)
+		if err != nil {
+			log.WithError(err).Fatalln("failed get valid chain ID")
+		}
+
+		fromAddress, signerFn, err := initEthereumAccountsManager(
+			chainID.Uint64(),
+			keystoreDir,
+			from,
+			fromPassphrase,
+			fromPrivKey,
+			useLedger,
+		)
+		if err != nil {
+			log.WithError(err).Fatalln("failed init SignerFn")
+		}
+
+		log.Debugln("sending from", fromAddress.Hex())
+
 		txOpts := deployer.ContractTxOpts{
 			From:         fromAddress,
-			FromPk:       privateKey,
+			SignerFn:     signerFn,
 			SolSource:    *solSource,
 			ContractName: *contractName,
 			Contract:     common.HexToAddress(*contractAddress),

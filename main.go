@@ -1,18 +1,22 @@
 package main
 
 import (
-	"crypto/ecdsa"
+	"bufio"
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
 )
 
 var app = cli.App("evm-deploy-contract", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.")
+
+func init() {
+	readEnv()
+}
 
 func main() {
 	app.Action = func() {
@@ -30,19 +34,20 @@ func main() {
 	}
 }
 
-func getFromAndPk(pkHex string) (common.Address, *ecdsa.PrivateKey) {
-	if len(pkHex) == 0 {
-		log.Fatal("private key not specified, use -P or --privkey")
-	} else {
-		pkHex = strings.TrimPrefix(pkHex, "0x")
+// readEnv is a special utility that reads `.env` file into actual environment variables
+// of the current app, similar to `dotenv` Node package.
+func readEnv() {
+	if envdata, _ := ioutil.ReadFile(".env"); len(envdata) > 0 {
+		s := bufio.NewScanner(bytes.NewReader(envdata))
+		for s.Scan() {
+			parts := strings.Split(s.Text(), "=")
+			if len(parts) != 2 {
+				continue
+			}
+			strValue := strings.Trim(parts[1], `"`)
+			if err := os.Setenv(parts[0], strValue); err != nil {
+				log.WithField("name", parts[0]).WithError(err).Warningln("failed to override ENV variable")
+			}
+		}
 	}
-
-	privateKey, err := crypto.HexToECDSA(pkHex)
-	if err != nil {
-		log.WithError(err).Fatal("failed to convert privkey from hex to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	return fromAddress, privateKey
 }

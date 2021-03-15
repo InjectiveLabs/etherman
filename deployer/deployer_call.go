@@ -25,7 +25,8 @@ type ContractCallOpts struct {
 }
 
 type ContractCoverageCallOpts struct {
-	FromPk *ecdsa.PrivateKey
+	FromPk   *ecdsa.PrivateKey
+	SignerFn bind.SignerFn
 }
 
 func (d *deployer) Call(
@@ -114,14 +115,15 @@ func (d *deployer) Call(
 		}
 
 		if callOpts.CoverageAgent != nil && coverageTopic != noHash {
-			if callOpts.CoverageCall.FromPk == nil {
-				err := errors.New("call with enabled coverage, but no PrivKey provided (for tx)")
+			if callOpts.CoverageCall.FromPk == nil && callOpts.CoverageCall.SignerFn == nil {
+				err := errors.New("call with enabled coverage, but no signer data provided (for tx)")
 				return nil, method.Outputs, err
 			}
 
 			txOpts := ContractTxOpts{
 				From:          callOpts.From,
 				FromPk:        callOpts.CoverageCall.FromPk,
+				SignerFn:      callOpts.CoverageCall.SignerFn,
 				SolSource:     callOpts.SolSource,
 				ContractName:  callOpts.ContractName,
 				Contract:      callOpts.Contract,

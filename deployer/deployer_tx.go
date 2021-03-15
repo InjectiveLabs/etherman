@@ -18,6 +18,7 @@ import (
 type ContractTxOpts struct {
 	From          common.Address
 	FromPk        *ecdsa.PrivateKey
+	SignerFn      bind.SignerFn
 	SolSource     string
 	ContractName  string
 	Contract      common.Address
@@ -140,10 +141,15 @@ func (d *deployer) Tx(
 	txCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
 	defer cancelFn()
 
-	signerFn, err := getSignerFn(d.options.SignerType, chainId, txOpts.From, txOpts.FromPk)
-	if err != nil {
-		log.WithError(err).Errorln("failed to get signer function")
-		return noHash, nil, err
+	var signerFn bind.SignerFn
+	if txOpts.SignerFn != nil {
+		signerFn = txOpts.SignerFn
+	} else {
+		signerFn, err = getSignerFn(d.options.SignerType, chainId, txOpts.From, txOpts.FromPk)
+		if err != nil {
+			log.WithError(err).Errorln("failed to get signer function")
+			return noHash, nil, err
+		}
 	}
 
 	ethTxOpts := &bind.TransactOpts{

@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"path/filepath"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/sol"
 	"github.com/pkg/errors"
 	log "github.com/xlab/suplog"
 
+	"github.com/InjectiveLabs/evm-deploy-contract/sol"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +25,7 @@ var (
 type ContractDeployOpts struct {
 	From          common.Address
 	FromPk        *ecdsa.PrivateKey
+	SignerFn      bind.SignerFn
 	SolSource     string
 	ContractName  string
 	BytecodeOnly  bool
@@ -105,10 +106,15 @@ func (d *deployer) Deploy(
 	txCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
 	defer cancelFn()
 
-	signerFn, err := getSignerFn(d.options.SignerType, chainId, deployOpts.From, deployOpts.FromPk)
-	if err != nil {
-		log.WithError(err).Errorln("failed to get signer function")
-		return noHash, nil, err
+	var signerFn bind.SignerFn
+	if deployOpts.SignerFn != nil {
+		signerFn = deployOpts.SignerFn
+	} else {
+		signerFn, err = getSignerFn(d.options.SignerType, chainId, deployOpts.From, deployOpts.FromPk)
+		if err != nil {
+			log.WithError(err).Errorln("failed to get signer function")
+			return noHash, nil, err
+		}
 	}
 
 	ethTxOpts := &bind.TransactOpts{
