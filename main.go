@@ -27,7 +27,6 @@ func main() {
 		&rpcTimeout,
 		&txTimeout,
 		&callTimeout,
-		&gasPriceSet,
 		&gasPrice,
 		&gasLimit,
 		&buildCacheDir,

@@ -141,7 +141,7 @@ type options struct {
 func defaultOptions() *options {
 	return &options{
 		RPCTimeout:  10 * time.Second,
-		TxTimeout:   10 * time.Second,
+		TxTimeout:   30 * time.Second,
 		CallTimeout: 10 * time.Second,
 
 		SignerType:     SignerEIP155,
@@ -198,9 +198,13 @@ func OptionSignerType(signerType SignerType) option {
 
 func OptionGasPrice(price *big.Int) option {
 	return func(o *options) error {
-		if price != nil {
-			o.GasPrice = price
+		if price != nil && price.String() == "-1" {
+			o.GasPrice = nil
+			return nil
 		}
+
+		// nil price means we will estimate
+		o.GasPrice = price
 
 		return nil
 	}

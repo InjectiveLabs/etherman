@@ -20,11 +20,6 @@ func onDeploy(cmd *cli.Cmd) {
 	cmd.Spec = "[--bytecode | --await] [ARGS...]"
 
 	cmd.Action = func() {
-		var gasPriceOpt *big.Int
-		if gasPriceSet {
-			gasPriceOpt = new(big.Int).SetUint64(uint64(*gasPrice))
-		}
-
 		d, err := deployer.New(
 			deployer.OptionRPCTimeout(duration(*rpcTimeout, defaultRPCTimeout)),
 			deployer.OptionCallTimeout(duration(*callTimeout, defaultCallTimeout)),
@@ -32,7 +27,7 @@ func onDeploy(cmd *cli.Cmd) {
 
 			// only options applicable to tx
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
-			deployer.OptionGasPrice(gasPriceOpt),
+			deployer.OptionGasPrice(big.NewInt(int64(*gasPrice))),
 			deployer.OptionGasLimit(uint64(*gasLimit)),
 			deployer.OptionNoCache(*noCache),
 			deployer.OptionBuildCacheDir(*buildCacheDir),

@@ -26,9 +26,7 @@ var (
 	txTimeout   *string
 	callTimeout *string
 
-	gasPriceSet bool
-	gasPrice    *int
-
+	gasPrice      *int
 	gasLimit      *int
 	buildCacheDir *string
 	noCache       *bool
@@ -49,9 +47,7 @@ func readGlobalOptions(
 	txTimeout **string,
 	callTimeout **string,
 
-	gasPriceSet *bool,
 	gasPrice **int,
-
 	gasLimit **int,
 	buildCacheDir **string,
 	noCache **bool,
@@ -116,11 +112,10 @@ func readGlobalOptions(
 	})
 
 	*gasPrice = app.Int(cli.IntOpt{
-		Name:      "G gas-price",
-		Desc:      "Override estimated gas price with this option.",
-		EnvVar:    "DEPLOYER_TX_GAS_PRICE",
-		Value:     50, // wei
-		SetByUser: gasPriceSet,
+		Name:   "G gas-price",
+		Desc:   "Override estimated gas price with this option.",
+		EnvVar: "DEPLOYER_TX_GAS_PRICE",
+		Value:  -1, // estimate
 	})
 
 	*gasLimit = app.Int(cli.IntOpt{
