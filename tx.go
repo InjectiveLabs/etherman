@@ -29,6 +29,10 @@ func onTx(cmd *cli.Cmd) {
 		}
 
 		d, err := deployer.New(
+			deployer.OptionRPCTimeout(duration(*rpcTimeout, defaultRPCTimeout)),
+			deployer.OptionCallTimeout(duration(*callTimeout, defaultCallTimeout)),
+			deployer.OptionTxTimeout(duration(*txTimeout, defaultTxTimeout)),
+
 			// only options applicable to tx
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionGasPrice(gasPriceOpt),
@@ -47,7 +51,7 @@ func onTx(cmd *cli.Cmd) {
 			log.Fatalln(err)
 		}
 
-		chainCtx, cancelFn := context.WithTimeout(context.Background(), defaultRPCTimeout)
+		chainCtx, cancelFn := context.WithTimeout(context.Background(), duration(*rpcTimeout, defaultRPCTimeout))
 		defer cancelFn()
 
 		chainID, err := client.ChainID(chainCtx)

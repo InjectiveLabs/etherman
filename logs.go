@@ -21,6 +21,10 @@ func onLogs(cmd *cli.Cmd) {
 
 	cmd.Action = func() {
 		d, err := deployer.New(
+			deployer.OptionRPCTimeout(duration(*rpcTimeout, defaultRPCTimeout)),
+			deployer.OptionCallTimeout(duration(*callTimeout, defaultCallTimeout)),
+			deployer.OptionTxTimeout(duration(*txTimeout, defaultTxTimeout)),
+
 			// only options applicable to call
 			deployer.OptionEVMRPCEndpoint(*evmEndpoint),
 			deployer.OptionNoCache(*noCache),

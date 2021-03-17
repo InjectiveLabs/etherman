@@ -4,11 +4,12 @@ import (
 	"time"
 
 	cli "github.com/jawher/mow.cli"
+	log "github.com/xlab/suplog"
 )
 
 const (
 	defaultRPCTimeout  = 10 * time.Second
-	defaultTxTimeout   = 10 * time.Second
+	defaultTxTimeout   = 30 * time.Second
 	defaultCallTimeout = 10 * time.Second
 )
 
@@ -21,6 +22,10 @@ var (
 	solAllowedPaths *[]string
 	evmEndpoint     *string
 
+	rpcTimeout  *string
+	txTimeout   *string
+	callTimeout *string
+
 	gasPriceSet bool
 	gasPrice    *int
 
@@ -28,6 +33,7 @@ var (
 	buildCacheDir *string
 	noCache       *bool
 	coverage      *bool
+	logLevel      *string
 )
 
 func readGlobalOptions(
@@ -39,6 +45,10 @@ func readGlobalOptions(
 	solAllowedPaths **[]string,
 	evmEndpoint **string,
 
+	rpcTimeout **string,
+	txTimeout **string,
+	callTimeout **string,
+
 	gasPriceSet *bool,
 	gasPrice **int,
 
@@ -46,6 +56,7 @@ func readGlobalOptions(
 	buildCacheDir **string,
 	noCache **bool,
 	coverage **bool,
+	logLevel **string,
 ) {
 	*solcPath = app.String(cli.StringOpt{
 		Name:      "solc-path",
@@ -83,6 +94,27 @@ func readGlobalOptions(
 		Value:  "http://localhost:8545",
 	})
 
+	*rpcTimeout = app.String(cli.StringOpt{
+		Name:   "rpc-timeout",
+		Desc:   "Specify overall timeout of an RPC request (e.g. 15s).",
+		EnvVar: "DEPLOYER_RPC_TIMEOUT",
+		Value:  "10s",
+	})
+
+	*txTimeout = app.String(cli.StringOpt{
+		Name:   "tx-timeout",
+		Desc:   "Specify overall timeout of a Transaction, including confirmation await (e.g. 50s).",
+		EnvVar: "DEPLOYER_TX_TIMEOUT",
+		Value:  "30s",
+	})
+
+	*callTimeout = app.String(cli.StringOpt{
+		Name:   "call-timeout",
+		Desc:   "Specify overall timeout of an EVM call (e.g. 15s).",
+		EnvVar: "DEPLOYER_CALL_TIMEOUT",
+		Value:  "10s",
+	})
+
 	*gasPrice = app.Int(cli.IntOpt{
 		Name:      "G gas-price",
 		Desc:      "Override estimated gas price with this option.",
@@ -118,4 +150,34 @@ func readGlobalOptions(
 		EnvVar: "DEPLOYER_ENABLE_COVERAGE",
 		Value:  false,
 	})
+
+	*logLevel = app.String(cli.StringOpt{
+		Name:   "l log-level",
+		Desc:   "Available levels: error, warn, info, debug.",
+		EnvVar: "DEPLOYER_LOG_LEVEL",
+		Value:  "info",
+	})
+}
+
+func toLogLevel(s string) log.Level {
+	switch s {
+	case "1", "error":
+		return log.ErrorLevel
+	case "2", "warn":
+		return log.WarnLevel
+	case "3", "info":
+		return log.InfoLevel
+	case "4", "debug":
+		return log.DebugLevel
+	default:
+		return log.FatalLevel
+	}
+}
+
+func duration(s string, defaults time.Duration) time.Duration {
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		dur = defaults
+	}
+	return dur
 }

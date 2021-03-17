@@ -24,12 +24,16 @@ func main() {
 		&solSource,
 		&solAllowedPaths,
 		&evmEndpoint,
+		&rpcTimeout,
+		&txTimeout,
+		&callTimeout,
 		&gasPriceSet,
 		&gasPrice,
 		&gasLimit,
 		&buildCacheDir,
 		&noCache,
 		&coverage,
+		&logLevel,
 	)
 
 	readEthereumKeyOptions(
@@ -42,6 +46,10 @@ func main() {
 
 	app.Action = func() {
 		fmt.Println("You should use either deploy, tx or logs command. See --help for more info.")
+	}
+
+	app.Before = func() {
+		log.DefaultLogger.SetLevel(toLogLevel(*logLevel))
 	}
 
 	app.Command("build", "Builds given contract and cached build artefacts. Optional step.", onBuild)
