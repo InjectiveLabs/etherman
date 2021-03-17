@@ -111,6 +111,12 @@ func awaitTx(ctx context.Context, client *Client, txHash common.Hash) (blockNum 
 					continue
 				}
 
+				// sometimes RPC providers like Alchemy are not very compliant
+				if strings.Contains(err.Error(), "missing required field") {
+					time.Sleep(time.Second)
+					continue
+				}
+
 				awaitLog.WithError(err).Errorln("failed to await transaction")
 				return nil, err
 			}
