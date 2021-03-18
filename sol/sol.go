@@ -91,7 +91,7 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 	if len(s.allowPaths) > 0 {
 		args = append(args, "--allow-paths", strings.Join(s.allowPaths, ","))
 	}
-	args = append(args, "--combined-json", "bin,abi", filepath.Join(prefix, path))
+	args = append(args, "--combined-json", "bin,abi,ast,compact-format", filepath.Join(prefix, path))
 	if optimize > 0 {
 		args = append(args, "--optimize", fmt.Sprintf("--optimize-runs=%d", optimize))
 	}
@@ -117,6 +117,42 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 	if len(result.Contracts) == 0 {
 		err := errors.New("solc: no contracts compiled")
 		return nil, err
+	} else if len(result.Sources) == 0 {
+		err := errors.New("solc: no source paths collected")
+		return nil, err
+	}
+
+	contractPathsByName := make(map[string]string, len(result.SourceList))
+	contractNamesOrdered := make([]string, len(result.SourceList))
+	contractFilePaths := make([]string, 0, len(result.SourceList))
+
+	for id := range result.Contracts {
+		name, sourcePath, err := idToNameAndSourcePath(id)
+		if err != nil {
+			return nil, err
+		}
+
+		contractPathsByName[name] = sourcePath
+	}
+	for name, sourcePath := range contractPathsByName {
+		for idx, src := range result.SourceList {
+			if src == sourcePath {
+				contractNamesOrdered[idx] = name
+				break
+			}
+		}
+	}
+
+	seenPaths := make(map[string]struct{}, len(contractPathsByName))
+
+	for _, contractName := range contractNamesOrdered {
+		filePath := contractPathsByName[contractName]
+		if _, ok := seenPaths[filePath]; ok {
+			continue
+		} else {
+			seenPaths[filePath] = struct{}{}
+		}
+		contractFilePaths = append(contractFilePaths, filePath)
 	}
 
 	contracts := make(map[string]*Contract, len(result.Contracts))
@@ -129,7 +165,7 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 		contracts[name] = &Contract{
 			Name:            name,
 			SourcePath:      sourcePath,
-			AllPaths:        []string{sourcePath},
+			AllPaths:        contractFilePaths,
 			CompilerVersion: result.Version,
 			Coverage:        false,
 
@@ -171,7 +207,7 @@ func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Cont
 		err := errors.New("solc: no contracts compiled")
 		return nil, err
 	} else if len(result.Sources) == 0 {
-		err := errors.New("solc: no sources collected")
+		err := errors.New("solc: source paths collected")
 		return nil, err
 	}
 
