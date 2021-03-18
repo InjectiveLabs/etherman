@@ -119,6 +119,19 @@ Arguments:
 evm-deploy-contract -E http://localhost:1317 logs 0x33832d3A5e359A0689088c832755461dDaD5d41B 0x8d2a06a2811cc4be16536c54e693ef1c268f8d04956fa0899e18372f6201fbe9 Increment
 ```
 
+### Verifying on Etherscan
+
+The simplest way to verify the contract on Etherscan (e.g. on https://kovan.etherscan.io/verifyContract) is to upload the Standard JSON for the contract. 
+```
+$ evm-deploy-contract --source Peggy.sol --name Peggy build --standard-json > peggy-standard.json
+
+$ evm-deploy-contract --source ./@openzeppelin/contracts/ProxyAdmin.sol --name ProxyAdmin build --standard-json > proxy-admin-standard.json
+
+$ evm-deploy-contract --source ./@openzeppelin/contracts/TransparentUpgradeableProxy.sol --name TransparentUpgradeableProxy build --standard-json > proxy-standard.json
+```
+
+Then submit the Standard JSON files with proper Solc version used. 
+
 ### License
 
 [MIT](/LICENSE)
