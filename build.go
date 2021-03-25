@@ -7,7 +7,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
+	"github.com/InjectiveLabs/etherman/deployer"
 )
 
 func onBuild(cmd *cli.Cmd) {

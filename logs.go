@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
+	"github.com/InjectiveLabs/etherman/deployer"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/xlab/suplog"
 

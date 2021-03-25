@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/deployer"
+	"github.com/InjectiveLabs/etherman/deployer"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	cli "github.com/jawher/mow.cli"

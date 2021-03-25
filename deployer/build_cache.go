@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/xlab/suplog"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/sol"
+	"github.com/InjectiveLabs/etherman/sol"
 )
 
 var ErrNoCache = errors.New("no cached version")

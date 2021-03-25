@@ -12,7 +12,7 @@ import (
 	log "github.com/xlab/suplog"
 )
 
-var app = cli.App("evm-deploy-contract", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.")
+var app = cli.App("etherman", "Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.")
 
 func main() {
 	readEnv()

@@ -1,4 +1,4 @@
-module github.com/InjectiveLabs/evm-deploy-contract
+module github.com/InjectiveLabs/etherman
 
 go 1.15
 

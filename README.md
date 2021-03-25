@@ -1,4 +1,4 @@
-## evm-deploy-contract
+## etherman
 
 A tool for contract deployment and testing.
 
@@ -7,9 +7,9 @@ A tool for contract deployment and testing.
 Install `solc` first, the executable will be located automatically.
 
 ```
-$ evm-deploy-contract --help
+$ etherman --help
 
-Usage: evm-deploy-contract [OPTIONS] COMMAND [arg...]
+Usage: etherman [OPTIONS] COMMAND [arg...]
 
 Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.
 
@@ -36,16 +36,16 @@ Commands:
   call                    Calls method of a particular contract. Uses build cache.
   logs                    Loads logs of a particular event from contract.
 
-Run 'evm-deploy-contract COMMAND --help' for more information on a command.
+Run 'etherman COMMAND --help' for more information on a command.
 
 ```
 
 ### Deploying
 
 ```
-$ evm-deploy-contract deploy --help
+$ etherman deploy --help
 
-Usage: evm-deploy-contract deploy [--bytecode | --await] [ARGS...]
+Usage: etherman deploy [--bytecode | --await] [ARGS...]
 
 Deploys given contract on the EVM chain. Caches build artefacts.
 
@@ -60,19 +60,19 @@ Options:
 **Example**
 
 ```
-$ evm-deploy-contract -E http://localhost:1317 -P 59F455CBF7B02A2C1F6B55B4D8D8FEF21BCD530457A9570999FB1C12C82F5201 -G 0 deploy
+$ etherman -E http://localhost:1317 -P 59F455CBF7B02A2C1F6B55B4D8D8FEF21BCD530457A9570999FB1C12C82F5201 -G 0 deploy
 ```
 
 ```
-$ evm-deploy-contract --source contracts/Counter.sol deploy --bytecode
+$ etherman --source contracts/Counter.sol deploy --bytecode
 ```
 
 ### Method transact
 
 ```
-$ evm-deploy-contract tx --help
+$ etherman tx --help
 
-Usage: evm-deploy-contract tx [--await] ADDRESS METHOD [ARGS...]
+Usage: etherman tx [--await] ADDRESS METHOD [ARGS...]
 
 Creates a transaction for particular contract method. Uses build cache.
 
@@ -89,21 +89,21 @@ Options:
 **Example**
 
 ```
-$ evm-deploy-contract -E http://localhost:1317 -P 1F2FAB11FA77AE1110D9E9AF59191C656B8BA1093F1480F99486F635E38597CC -G 0 \
+$ etherman -E http://localhost:1317 -P 1F2FAB11FA77AE1110D9E9AF59191C656B8BA1093F1480F99486F635E38597CC -G 0 \
     tx 0x33832d3A5e359A0689088c832755461dDaD5d41B add
 ```
 
 ```
-$ evm-deploy-contract -E http://localhost:1317 -P 1F2FAB11FA77AE1110D9E9AF59191C656B8BA1093F1480F99486F635E38597CC -G 0 \
+$ etherman -E http://localhost:1317 -P 1F2FAB11FA77AE1110D9E9AF59191C656B8BA1093F1480F99486F635E38597CC -G 0 \
     tx --await=false 0x33832d3A5e359A0689088c832755461dDaD5d41B addValue 10
 ```
 
 ### Read logs
 
 ```
-$ evm-deploy-contract logs --help
+$ etherman logs --help
 
-Usage: evm-deploy-contract logs ADDRESS TX_HASH EVENT_NAME
+Usage: etherman logs ADDRESS TX_HASH EVENT_NAME
 
 Loads logs of a particular event from contract.
 
@@ -116,22 +116,22 @@ Arguments:
 **Example**
 
 ```
-evm-deploy-contract -E http://localhost:1317 logs 0x33832d3A5e359A0689088c832755461dDaD5d41B 0x8d2a06a2811cc4be16536c54e693ef1c268f8d04956fa0899e18372f6201fbe9 Increment
+etherman -E http://localhost:1317 logs 0x33832d3A5e359A0689088c832755461dDaD5d41B 0x8d2a06a2811cc4be16536c54e693ef1c268f8d04956fa0899e18372f6201fbe9 Increment
 ```
 
 ### Verifying on Etherscan
 
 The simplest way to verify the contract on Etherscan (e.g. on https://kovan.etherscan.io/verifyContract) is to upload the Standard JSON for the contract. 
 ```
-$ evm-deploy-contract --source Peggy.sol --name Peggy build --standard-json > peggy-standard.json
+$ etherman --source Peggy.sol --name Peggy build --standard-json > peggy-standard.json
 
-$ evm-deploy-contract --source ./@openzeppelin/contracts/ProxyAdmin.sol --name ProxyAdmin build --standard-json > proxy-admin-standard.json
+$ etherman --source ./@openzeppelin/contracts/ProxyAdmin.sol --name ProxyAdmin build --standard-json > proxy-admin-standard.json
 
-$ evm-deploy-contract --source ./@openzeppelin/contracts/TransparentUpgradeableProxy.sol --name TransparentUpgradeableProxy build --standard-json > proxy-standard.json
+$ etherman --source ./@openzeppelin/contracts/TransparentUpgradeableProxy.sol --name TransparentUpgradeableProxy build --standard-json > proxy-standard.json
 ```
 
 Then submit the Standard JSON files with proper Solc version used. 
 
 ### License
 
-[MIT](/LICENSE)
+[Apache 2.0](/LICENSE)

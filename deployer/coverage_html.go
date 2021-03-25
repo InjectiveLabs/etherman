@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// With changes for evm-deploy-contract Solidity coverage.
+// With changes for etherman Solidity coverage.
 package deployer
 
 import (

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/sol"
+	"github.com/InjectiveLabs/etherman/sol"
 )
 
 type TransactFunc func(opts *bind.TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error)

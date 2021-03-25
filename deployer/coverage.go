@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/InjectiveLabs/evm-deploy-contract/sol"
+	"github.com/InjectiveLabs/etherman/sol"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ctypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/hashicorp/go-multierror"
