@@ -22,6 +22,7 @@ type ContractTxOpts struct {
 	SolSource     string
 	ContractName  string
 	Contract      common.Address
+	Value         *big.Int
 	BytecodeOnly  bool
 	Await         bool
 	CoverageAgent CoverageDataCollector
@@ -164,7 +165,7 @@ func (d *deployer) Tx(
 		From:     txOpts.From,
 		Nonce:    big.NewInt(int64(nonce)),
 		Signer:   signerFn,
-		Value:    big.NewInt(0),
+		Value:    txOpts.Value,
 		GasPrice: d.options.GasPrice,
 		GasLimit: d.options.GasLimit,
 

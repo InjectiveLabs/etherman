@@ -14,7 +14,6 @@ import (
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
@@ -141,7 +140,7 @@ func initEthereumAccountsManager(
 			return emptyEthAddress, nil, err
 		}
 
-		ethAddressFromPk := ethcrypto.PubkeyToAddress(ethPk.PublicKey)
+		ethAddressFromPk := crypto.PubkeyToAddress(ethPk.PublicKey)
 
 		if len(*from) > 0 {
 			addr := ethcmn.HexToAddress(*from)
