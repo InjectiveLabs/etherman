@@ -91,7 +91,7 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 	if len(s.allowPaths) > 0 {
 		args = append(args, "--allow-paths", strings.Join(s.allowPaths, ","))
 	}
-	args = append(args, "--combined-json", "bin,abi,ast,compact-format", filepath.Join(prefix, path))
+	args = append(args, "--combined-json", "bin,abi,ast", filepath.Join(prefix, path))
 	if optimize > 0 {
 		args = append(args, "--optimize", fmt.Sprintf("--optimize-runs=%d", optimize))
 	}
