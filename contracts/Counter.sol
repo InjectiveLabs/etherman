@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >= 0.6.0 <0.9.0;
 
+import "Bank.sol";
+
+address constant BANK_PRECOMPILE_ADDRESS = 0x0000000000000000000000000000000000000064;
+IBankModule constant BANK_CONTRACT = IBankModule(BANK_PRECOMPILE_ADDRESS);
+
 contract Counter {
     uint256 counter = 0;
 
@@ -29,6 +34,10 @@ contract Counter {
     
     function getCounter() public view returns (uint256) {
         return counter;
+    }
+
+    function getBalance(address denom, address who) public view returns (uint256) {
+        return BANK_CONTRACT.balanceOf(denom, who);
     }
     
     event Created(address maker);
