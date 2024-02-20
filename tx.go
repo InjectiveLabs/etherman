@@ -18,9 +18,10 @@ func onTx(cmd *cli.Cmd) {
 	contractAddress := cmd.StringArg("ADDRESS", "", "Contract address to interact with.")
 	methodName := cmd.StringArg("METHOD", "", "Contract method to transact.")
 	methodArgs := cmd.StringsArg("ARGS", []string{}, "Method transaction arguments. Will be ABI-encoded.")
+	valueArg := cmd.StringOpt("value", "0", "Value to be sent along with the transaction")
 	await := cmd.BoolOpt("await", true, "Await transaction confirmation from the RPC.")
 
-	cmd.Spec = "[--bytecode | --await] ADDRESS METHOD [ARGS...]"
+	cmd.Spec = "[--bytecode | --await | --value] ADDRESS METHOD [ARGS...]"
 
 	cmd.Action = func() {
 		d, err := deployer.New(
@@ -68,6 +69,11 @@ func onTx(cmd *cli.Cmd) {
 
 		log.Debugln("sending from", fromAddress.Hex())
 
+		value, ok := new(big.Int).SetString(*valueArg, 10)
+		if !ok {
+			log.WithError(err).Fatalln("failed to parse value flag")
+		}
+
 		txOpts := deployer.ContractTxOpts{
 			From:         fromAddress,
 			SignerFn:     signerFn,
@@ -76,6 +82,7 @@ func onTx(cmd *cli.Cmd) {
 			Contract:     common.HexToAddress(*contractAddress),
 			BytecodeOnly: *bytecodeOnly,
 			Await:        *await,
+			Value:        value,
 		}
 		if *coverage {
 			txOpts.CoverageAgent = deployer.NewCoverageDataCollector(deployer.CoverageModeDefault)
