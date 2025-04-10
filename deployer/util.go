@@ -270,7 +270,7 @@ func getTransactFn(ec *Client, contractAddress common.Address, txHashOut *common
 		}
 		var nonce uint64
 		if opts.Nonce == nil {
-			nonce, err = ec.PendingNonceAt(opts.Context, opts.From)
+			nonce, err = ec.NonceAt(opts.Context, opts.From, nil)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
 			}

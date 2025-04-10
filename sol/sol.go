@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
+	log "github.com/xlab/suplog"
 )
 
 type Contract struct {
@@ -94,6 +94,7 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 	args = append(args, "--combined-json", "bin,abi,ast", filepath.Join(prefix, path))
 	if optimize > 0 {
 		args = append(args, "--optimize", fmt.Sprintf("--optimize-runs=%d", optimize))
+		args = append(args, "--via-ir")
 	}
 	cmd := exec.Cmd{
 		Path:   s.solcPath,
@@ -101,6 +102,8 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 		Dir:    prefix,
 		Stderr: os.Stderr,
 	}
+
+	log.Infoln("Running solc compiler:", cmd.String())
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -183,7 +186,7 @@ func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Cont
 		args = append(args, "--allow-paths", strings.Join(s.allowPaths, ","))
 	}
 
-	args = append(args, "--optimize", "--combined-json", "ast,compact-format", filepath.Join(prefix, path))
+	args = append(args, "--optimize", "--combined-json", "ast", filepath.Join(prefix, path))
 
 	cmd := exec.Cmd{
 		Path:   s.solcPath,
@@ -191,6 +194,8 @@ func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Cont
 		Dir:    prefix,
 		Stderr: os.Stderr,
 	}
+
+	log.Infoln("Running solc compiler:", cmd.String())
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -265,7 +270,7 @@ func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Cont
 		}
 	}
 
-	tmp, err := ioutil.TempFile("", "*_sol_coverage.json")
+	tmp, err := os.CreateTemp("", "*_sol_coverage.json")
 	if err != nil {
 		err = errors.Wrap(err, "failed to open temp file for orchestrated AST output")
 		return nil, err
@@ -294,6 +299,8 @@ func (s *solCompiler) CompileWithCoverage(prefix, path string) (map[string]*Cont
 		Dir:    prefix,
 		Stderr: errOut,
 	}
+
+	log.Infoln("Running solc compiler:", finalCmd.String())
 
 	finalOutput, err := finalCmd.Output()
 	if err != nil {

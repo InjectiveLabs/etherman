@@ -10,13 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
-	"github.com/ethereum/go-ethereum/common"
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/InjectiveLabs/etherman/keystore"
 )
@@ -101,7 +100,7 @@ func initEthereumAccountsManager(
 			return emptyEthAddress, nil, err
 		}
 
-		signerFn = func(from common.Address, tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
+		signerFn = func(from ethcmn.Address, tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
 			acc := accounts.Account{
 				Address: from,
 			}
@@ -134,13 +133,13 @@ func initEthereumAccountsManager(
 
 	case len(*fromPrivKey) > 0:
 		pkHex := strings.TrimPrefix(*fromPrivKey, "0x")
-		ethPk, err := crypto.HexToECDSA(pkHex)
+		ethPk, err := ethcrypto.HexToECDSA(pkHex)
 		if err != nil {
 			err = errors.Wrap(err, "failed to hex-decode Ethereum ECDSA Private Key")
 			return emptyEthAddress, nil, err
 		}
 
-		ethAddressFromPk := crypto.PubkeyToAddress(ethPk.PublicKey)
+		ethAddressFromPk := ethcrypto.PubkeyToAddress(ethPk.PublicKey)
 
 		if len(*from) > 0 {
 			addr := ethcmn.HexToAddress(*from)
@@ -210,7 +209,7 @@ func initEthereumAccountsManager(
 
 func ethPassFromStdin() (string, error) {
 	fmt.Print("Passphrase for Ethereum account: ")
-	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		err := errors.Wrap(err, "failed to read password from stdin")
 		return "", err
