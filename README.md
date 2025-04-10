@@ -11,7 +11,7 @@ $ etherman --help
 
 Usage: etherman [OPTIONS] COMMAND [arg...]
 
-Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.6.x or later.
+Deploys arbitrary contract on an arbitrary EVM. Requires solc 0.8.x or later.
 
 Options:
       --solc-path         Set path solc executable. Found using 'which' otherwise (env $DEPLOYER_SOLC_PATH)
@@ -121,7 +121,7 @@ etherman -E http://localhost:1317 logs 0x33832d3A5e359A0689088c832755461dDaD5d41
 
 ### Verifying on Etherscan
 
-The simplest way to verify the contract on Etherscan (e.g. on https://kovan.etherscan.io/verifyContract) is to upload the Standard JSON for the contract. 
+The simplest way to verify the contract on Etherscan (e.g. on https://sepolia.etherscan.io/verifyContract) is to upload the Standard JSON for the contract. 
 ```
 $ etherman --source Peggy.sol --name Peggy build --standard-json > peggy-standard.json
 
