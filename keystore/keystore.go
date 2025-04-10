@@ -44,6 +44,8 @@ func New(paths ...string) (EthKeyStore, error) {
 		ks.paths[path] = struct{}{}
 	}
 
+	ks.reloadPathsCache()
+
 	return ks, nil
 }
 
