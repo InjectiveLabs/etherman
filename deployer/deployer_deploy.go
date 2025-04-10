@@ -84,7 +84,7 @@ func (d *deployer) Deploy(
 	nonceCtx, cancelFn := context.WithTimeout(context.Background(), d.options.RPCTimeout)
 	defer cancelFn()
 
-	nonce, err := client.PendingNonceAt(nonceCtx, deployOpts.From)
+	nonce, err := client.NonceAt(nonceCtx, deployOpts.From, nil)
 	if err != nil {
 		log.WithField("from", deployOpts.From.Hex()).WithError(err).Errorln("failed to get most recent nonce")
 		return noHash, nil, ErrNoNonce
