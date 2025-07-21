@@ -94,7 +94,6 @@ func (s *solCompiler) Compile(prefix, path string, optimize int) (map[string]*Co
 	args = append(args, "--combined-json", "bin,abi,ast", filepath.Join(prefix, path))
 	if optimize > 0 {
 		args = append(args, "--optimize", fmt.Sprintf("--optimize-runs=%d", optimize))
-		args = append(args, "--via-ir")
 	}
 	cmd := exec.Cmd{
 		Path:   s.solcPath,

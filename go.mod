@@ -2,8 +2,6 @@ module github.com/InjectiveLabs/etherman
 
 go 1.23.7
 
-toolchain go1.24
-
 require (
 	github.com/ethereum/go-ethereum v1.15.7
 	github.com/hashicorp/go-multierror v1.1.1
@@ -20,7 +18,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
 	github.com/consensys/bavard v0.1.30 // indirect
 	github.com/consensys/gnark-crypto v0.17.0 // indirect
